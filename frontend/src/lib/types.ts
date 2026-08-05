@@ -1,0 +1,183 @@
+// TypeScript mirrors of the backend Pydantic schemas.
+
+export type Frequency = "daily" | "weekly" | "monthly" | "custom";
+export type Priority = "low" | "medium" | "high" | "critical";
+export type TimeOfDay = "morning" | "afternoon" | "evening" | "night" | "any";
+export type Difficulty = "trivial" | "easy" | "medium" | "hard";
+export type HabitLogStatus = "completed" | "partial" | "skipped";
+export type TaskStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
+
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  frequency: Frequency;
+  custom_days?: number[] | null;
+  target_per_period: number;
+  priority: Priority;
+  estimated_duration_min?: number | null;
+  difficulty: Difficulty;
+  motivation_level: number;
+  required_energy: number;
+  location?: string | null;
+  time_preference: TimeOfDay;
+  color?: string | null;
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HabitStats {
+  habit_id: string;
+  current_streak: number;
+  longest_streak: number;
+  total_completions: number;
+  success_rate: number;
+  consistency_30d: number;
+  best_weekday?: string | null;
+  worst_weekday?: string | null;
+  most_productive_hour?: number | null;
+  average_duration_min?: number | null;
+  last_completed?: string | null;
+}
+
+export interface HabitWithStats extends Habit {
+  stats: HabitStats;
+}
+
+export interface HabitCreate {
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  frequency?: Frequency;
+  custom_days?: number[] | null;
+  target_per_period?: number;
+  priority?: Priority;
+  estimated_duration_min?: number | null;
+  difficulty?: Difficulty;
+  motivation_level?: number;
+  required_energy?: number;
+  location?: string | null;
+  time_preference?: TimeOfDay;
+  color?: string | null;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  date: string;
+  status: HabitLogStatus;
+  partial_amount?: number | null;
+  reason?: string | null;
+  mood_after?: number | null;
+  energy_before?: number | null;
+  energy_after?: number | null;
+  duration_min?: number | null;
+  note?: string | null;
+  logged_at: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string | null;
+  project_id?: string | null;
+  parent_id?: string | null;
+  status: TaskStatus;
+  priority: Priority;
+  tags?: string[] | null;
+  labels?: string[] | null;
+  estimated_effort_min?: number | null;
+  actual_effort_min?: number | null;
+  due_date?: string | null;
+  deadline?: string | null;
+  scheduled_for?: string | null;
+  context?: string | null;
+  energy_required: number;
+  focus_required: number;
+  location?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  mood?: number | null;
+  energy?: number | null;
+  sleep_hours?: number | null;
+  gratitude?: string | null;
+  wins?: string | null;
+  challenges?: string | null;
+  free_writing?: string | null;
+  reflection?: string | null;
+  lessons?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Recommendation {
+  id: string;
+  kind: string;
+  title: string;
+  detail: string;
+  confidence: number;
+  reason: string;
+}
+
+export interface HabitTodayItem {
+  id: string;
+  title: string;
+  category?: string | null;
+  color?: string | null;
+  time_preference: TimeOfDay;
+  priority: Priority;
+  estimated_duration_min?: number | null;
+  current_streak: number;
+  status_today?: HabitLogStatus | null;
+  done_today: boolean;
+}
+
+export interface StreakItem {
+  habit_id: string;
+  title: string;
+  current_streak: number;
+  longest_streak: number;
+}
+
+export interface Dashboard {
+  date: string;
+  greeting: string;
+  habits_today: HabitTodayItem[];
+  habits_completed: number;
+  habits_total: number;
+  tasks_today: Task[];
+  tasks_open: number;
+  suggested_task?: Task | null;
+  top_streaks: StreakItem[];
+  weekly_consistency: number;
+  life_score: number;
+  life_score_trend: number[];
+  focus_score?: number | null;
+  mood?: number | null;
+  energy?: number | null;
+  sleep_hours?: number | null;
+  recent_journal?: JournalEntry | null;
+  recommendations: Recommendation[];
+}
+
+export interface HeatmapCell {
+  date: string;
+  count: number;
+  level: number;
+}
+
+export interface Heatmap {
+  start: string;
+  end: string;
+  total: number;
+  max_count: number;
+  cells: HeatmapCell[];
+}

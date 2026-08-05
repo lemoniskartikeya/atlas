@@ -1,0 +1,42 @@
+# ---- Python / backend ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.db-journal
+*.sqlite3
+atlas.db*
+.coverage
+htmlcov/
+
+# ---- Node / frontend ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+frontend/stats.html
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Data / backups (user-owned, never commit) ----
+data/
+backups/
+exports/
+*.pdf
+!docs/**/*.pdf
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

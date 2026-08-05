@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ tokens */
+:root {
+  --canvas: 243 244 246;
+  --surface: 255 255 255;
+  --panel: 255 255 255;
+  --border: 15 23 42;
+  --ink: 22 27 34;
+  --ink-muted: 92 101 114;
+  --ink-faint: 141 149 161;
+  --accent: 74 108 170;
+  --success: 74 132 100;
+  --warn: 176 130 70;
+  --glass-alpha: 0.72;
+  --glass-border: 0.55;
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: 11 13 17;
+  --surface: 22 26 32;
+  --panel: 32 37 46;
+  --border: 255 255 255;
+  --ink: 231 234 239;
+  --ink-muted: 156 164 176;
+  --ink-faint: 108 116 129;
+  --accent: 139 168 224;
+  --success: 122 178 146;
+  --warn: 209 168 110;
+  --glass-alpha: 0.5;
+  --glass-border: 0.09;
+  color-scheme: dark;
+}
+
+/* Subtle default separators; explicit border-* utilities override this. */
+* {
+  border-color: rgb(var(--border) / 0.08);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-ink font-sans antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* -------------------------------------------------------- ambient backdrop */
+/* Soft, blurred color fields sitting behind the frosted-glass panels.        */
+.app-aurora::before {
+  content: "";
+  position: fixed;
+  inset: -25% -10% auto -10%;
+  height: 75vh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 52% at 16% 18%, rgb(var(--accent) / 0.2), transparent 70%),
+    radial-gradient(36% 48% at 84% 10%, rgb(120 150 205 / 0.16), transparent 70%),
+    radial-gradient(46% 60% at 58% 88%, rgb(150 160 176 / 0.12), transparent 72%);
+  filter: blur(34px) saturate(118%);
+}
+
+/* --------------------------------------------------------------- glass */
+.glass {
+  background: rgb(var(--panel) / var(--glass-alpha));
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  backdrop-filter: blur(22px) saturate(165%);
+  border: 1px solid rgb(var(--border) / var(--glass-border));
+  box-shadow: theme("boxShadow.glass");
+}
+
+.dark .glass {
+  box-shadow: theme("boxShadow.glass-lg");
+}
+
+.glass-inset {
+  background: rgb(var(--panel) / calc(var(--glass-alpha) * 0.45));
+  border: 1px solid rgb(var(--border) / calc(var(--glass-border) * 0.65));
+}
+
+.hairline {
+  border-color: rgb(var(--border) / 0.1);
+}
+.dark .hairline {
+  border-color: rgb(var(--border) / 0.08);
+}
+
+/* --------------------------------------------------------- scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--ink-faint) / 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink-faint) / 0.32);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink-faint) / 0.5);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--accent) / 0.6);
+  outline-offset: 2px;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
