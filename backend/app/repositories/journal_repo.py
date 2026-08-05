@@ -29,3 +29,12 @@ class JournalRepository(BaseRepository[JournalEntry]):
         return self.session.scalars(
             select(JournalEntry).order_by(JournalEntry.date.desc())
         ).first()
+
+    def in_range(self, start: date, end: date) -> Sequence[JournalEntry]:
+        return list(
+            self.session.scalars(
+                select(JournalEntry)
+                .where(JournalEntry.date >= start, JournalEntry.date <= end)
+                .order_by(JournalEntry.date)
+            )
+        )

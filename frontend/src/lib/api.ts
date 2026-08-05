@@ -1,4 +1,6 @@
 import type {
+  AnalyticsSummary,
+  CorrelationsResponse,
   Dashboard,
   Habit,
   HabitCreate,
@@ -8,6 +10,7 @@ import type {
   Heatmap,
   JournalEntry,
   Task,
+  WeeklyResponse,
 } from "./types";
 
 // Same-origin by default; the Vite dev server proxies /api -> backend.
@@ -60,6 +63,10 @@ export const api = {
   deleteTask: (id: string) => http<void>(`/tasks/${id}`, { method: "DELETE" }),
 
   heatmap: (days = 365) => http<Heatmap>(`/analytics/heatmap?days=${days}`),
+  analyticsSummary: () => http<AnalyticsSummary>("/analytics/summary"),
+  analyticsWeekly: (weeks = 12) => http<WeeklyResponse>(`/analytics/weekly?weeks=${weeks}`),
+  analyticsCorrelations: (days = 90) =>
+    http<CorrelationsResponse>(`/analytics/correlations?days=${days}`),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

@@ -181,3 +181,66 @@ export interface Heatmap {
   max_count: number;
   cells: HeatmapCell[];
 }
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
+export interface TopHabit {
+  id: string;
+  title: string;
+  current_streak: number;
+  longest_streak: number;
+  success_rate: number;
+  consistency_30d: number;
+  total_completions: number;
+}
+
+export interface AnalyticsSummary {
+  total_completions: number;
+  active_habits: number;
+  journal_entries: number;
+  tasks_completed: number;
+  tasks_open: number;
+  best_current_streak: number;
+  longest_streak_ever: number;
+  avg_mood: number | null;
+  avg_energy: number | null;
+  avg_sleep: number | null;
+  deep_work_hours: number;
+  by_weekday: number[];
+  by_category: CategoryCount[];
+  top_habits: TopHabit[];
+}
+
+export interface WeeklyPoint {
+  week_start: string;
+  label: string;
+  completions: number;
+  rate: number;
+}
+
+export interface WeeklyResponse {
+  weeks: WeeklyPoint[];
+}
+
+export interface CorrelationPoint {
+  date: string;
+  x: number;
+  y: number;
+}
+
+export interface CorrelationPair {
+  key: string;
+  x_label: string;
+  y_label: string;
+  coefficient: number | null;
+  n: number;
+  interpretation: string;
+  points: CorrelationPoint[];
+}
+
+export interface CorrelationsResponse {
+  pairs: CorrelationPair[];
+}

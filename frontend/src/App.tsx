@@ -1,11 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { BarChart3, CalendarDays, Settings, Timer } from "lucide-react";
+import { CalendarDays, Settings, Timer } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { HabitsPage } from "@/features/habits/HabitsPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
+import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 
 export default function App() {
   return (
@@ -16,17 +17,7 @@ export default function App() {
 
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/journal" element={<JournalPage />} />
-        <Route
-          path="/analytics"
-          element={
-            <ComingSoon
-              title="Analytics"
-              icon={BarChart3}
-              phase="Phase 3"
-              description="Correlations (sleep vs. focus, mood vs. productivity), monthly reports, and personal bests — built on the same history that powers your consistency heatmap."
-            />
-          }
-        />
+        <Route path="/analytics" element={<AnalyticsPage />} />
         <Route
           path="/calendar"
           element={

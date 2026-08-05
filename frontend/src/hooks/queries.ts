@@ -39,6 +39,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["heatmap"] });
     qc.invalidateQueries({ queryKey: ["habit"] });
     qc.invalidateQueries({ queryKey: ["tasks"] });
+    qc.invalidateQueries({ queryKey: ["analytics"] });
   };
 }
 
@@ -119,5 +120,23 @@ export function useUpsertJournal() {
       refresh();
       qc.invalidateQueries({ queryKey: keys.journal });
     },
+  });
+}
+
+export function useAnalyticsSummary() {
+  return useQuery({ queryKey: ["analytics", "summary"], queryFn: api.analyticsSummary });
+}
+
+export function useAnalyticsWeekly(weeks = 12) {
+  return useQuery({
+    queryKey: ["analytics", "weekly", weeks],
+    queryFn: () => api.analyticsWeekly(weeks),
+  });
+}
+
+export function useAnalyticsCorrelations(days = 90) {
+  return useQuery({
+    queryKey: ["analytics", "correlations", days],
+    queryFn: () => api.analyticsCorrelations(days),
   });
 }

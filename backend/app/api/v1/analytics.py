@@ -4,7 +4,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import analytics_service
-from app.schemas.analytics import HeatmapResponse
+from app.schemas.analytics import (
+    AnalyticsSummary,
+    CorrelationsResponse,
+    HeatmapResponse,
+    WeeklyResponse,
+)
 from app.services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -16,3 +21,24 @@ def heatmap(
     svc: AnalyticsService = Depends(analytics_service),
 ):
     return svc.heatmap(days)
+
+
+@router.get("/summary", response_model=AnalyticsSummary)
+def summary(svc: AnalyticsService = Depends(analytics_service)):
+    return svc.summary()
+
+
+@router.get("/weekly", response_model=WeeklyResponse)
+def weekly(
+    weeks: int = Query(12, ge=1, le=53),
+    svc: AnalyticsService = Depends(analytics_service),
+):
+    return svc.weekly(weeks)
+
+
+@router.get("/correlations", response_model=CorrelationsResponse)
+def correlations(
+    days: int = Query(90, ge=7, le=365),
+    svc: AnalyticsService = Depends(analytics_service),
+):
+    return svc.correlations(days)
