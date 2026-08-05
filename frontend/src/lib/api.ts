@@ -57,9 +57,11 @@ export const api = {
   updateTask: (id: string, body: Partial<Task>) =>
     http<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   completeTask: (id: string) => http<Task>(`/tasks/${id}/complete`, { method: "POST" }),
+  deleteTask: (id: string) => http<void>(`/tasks/${id}`, { method: "DELETE" }),
 
   heatmap: (days = 365) => http<Heatmap>(`/analytics/heatmap?days=${days}`),
 
+  journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),
   upsertJournal: (date: string, body: Partial<JournalEntry>) =>
     http<JournalEntry>(`/journal/${date}`, { method: "PUT", body: JSON.stringify(body) }),

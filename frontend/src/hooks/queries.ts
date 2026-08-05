@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Habit, HabitCreate, HabitLog, Task } from "@/lib/types";
+import type { Habit, HabitCreate, HabitLog, JournalEntry, Task } from "@/lib/types";
 
 export const keys = {
   dashboard: ["dashboard"] as const,
@@ -8,6 +8,7 @@ export const keys = {
   habit: (id: string) => ["habit", id] as const,
   tasks: (scope: string) => ["tasks", scope] as const,
   heatmap: (days: number) => ["heatmap", days] as const,
+  journal: ["journal"] as const,
 };
 
 export function useDashboard() {
@@ -86,4 +87,37 @@ export function useCreateTask() {
 export function useCompleteTask() {
   const refresh = useRefreshEverything();
   return useMutation({ mutationFn: (id: string) => api.completeTask(id), onSuccess: refresh });
+}
+
+export function useUpdateTask() {
+  const refresh = useRefreshEverything();
+  return useMutation({
+    mutationFn: (v: { id: string; body: Partial<Task> }) => api.updateTask(v.id, v.body),
+    onSuccess: refresh,
+  });
+}
+
+export function useDeleteTask() {
+  const refresh = useRefreshEverything();
+  return useMutation({ mutationFn: (id: string) => api.deleteTask(id), onSuccess: refresh });
+}
+
+export function useJournalRecent(limit = 30) {
+  return useQuery({
+    queryKey: [...keys.journal, limit],
+    queryFn: () => api.journalRecent(limit),
+  });
+}
+
+export function useUpsertJournal() {
+  const qc = useQueryClient();
+  const refresh = useRefreshEverything();
+  return useMutation({
+    mutationFn: (v: { date: string; body: Partial<JournalEntry> }) =>
+      api.upsertJournal(v.date, v.body),
+    onSuccess: () => {
+      refresh();
+      qc.invalidateQueries({ queryKey: keys.journal });
+    },
+  });
 }

@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { BarChart3, BookOpen, CalendarDays, ListTodo, Settings, Timer } from "lucide-react";
+import { BarChart3, CalendarDays, Settings, Timer } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { HabitsPage } from "@/features/habits/HabitsPage";
+import { TasksPage } from "@/features/tasks/TasksPage";
+import { JournalPage } from "@/features/journal/JournalPage";
 
 export default function App() {
   return (
@@ -12,28 +14,8 @@ export default function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/habits" element={<HabitsPage />} />
 
-        <Route
-          path="/tasks"
-          element={
-            <ComingSoon
-              title="Tasks"
-              icon={ListTodo}
-              phase="Phase 2"
-              description="Projects, subtasks, dependencies, and recurring tasks. The task engine and API already run — your dashboard reads from them today; this surface is next."
-            />
-          }
-        />
-        <Route
-          path="/journal"
-          element={
-            <ComingSoon
-              title="Daily Journal"
-              icon={BookOpen}
-              phase="Phase 2"
-              description="An auto-created page each day for mood, energy, sleep, gratitude, wins, and reflection. The journal API is already live and feeding your wellbeing card."
-            />
-          }
-        />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/journal" element={<JournalPage />} />
         <Route
           path="/analytics"
           element={
