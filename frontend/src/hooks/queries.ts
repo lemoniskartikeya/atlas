@@ -56,6 +56,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["predictions"] });
     qc.invalidateQueries({ queryKey: ["notifications"] });
     qc.invalidateQueries({ queryKey: ["simulation"] });
+    qc.invalidateQueries({ queryKey: ["review"] });
   };
 }
 
@@ -163,6 +164,14 @@ export function usePlan() {
 
 export function usePredictions() {
   return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
+}
+
+export function useWeeklyReview(offset: number) {
+  return useQuery({
+    queryKey: ["review", offset],
+    queryFn: () => api.review(offset),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useSimulation(body: SimulationRequest, enabled: boolean) {

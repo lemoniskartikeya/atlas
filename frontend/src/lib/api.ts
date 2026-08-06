@@ -17,6 +17,7 @@ import type {
   SimulationRequest,
   SimulationResponse,
   Task,
+  WeeklyReview,
   TrainOutcome,
   WeeklyResponse,
 } from "./types";
@@ -92,6 +93,8 @@ export const api = {
 
   simulate: (body: SimulationRequest) =>
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
+
+  review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

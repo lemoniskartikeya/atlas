@@ -412,3 +412,37 @@ export interface SimulationResponse {
   summary: string;
   rows: SimHabitRow[];
 }
+
+export interface ReviewMetric {
+  key: string;
+  label: string;
+  value: string;
+  delta?: number | null;
+  direction?: "up" | "down" | "flat" | null;
+  hint?: string | null;
+}
+
+export interface ReviewItem {
+  title: string;
+  detail: string;
+  habit_id?: string | null;
+}
+
+export interface WeeklyReview {
+  start: string;
+  end: string;
+  label: string;
+  offset: number;
+  is_current: boolean;
+  can_go_forward: boolean;
+  completion_rate: number;
+  prev_completion_rate?: number | null;
+  completions: number;
+  due: number;
+  tasks_completed: number;
+  metrics: ReviewMetric[];
+  wins: ReviewItem[];
+  watchouts: ReviewItem[];
+  focus: string[];
+  narrative: string;
+}

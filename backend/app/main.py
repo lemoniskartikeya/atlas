@@ -15,6 +15,7 @@ from app.api.v1 import (
     notifications,
     planner,
     predictions,
+    review,
     simulator,
     tasks,
 )
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
         predictions.router,
         notifications.router,
         simulator.router,
+        review.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

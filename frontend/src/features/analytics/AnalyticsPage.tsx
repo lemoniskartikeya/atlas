@@ -13,6 +13,7 @@ import {
 } from "@/hooks/queries";
 import { cn, pct } from "@/lib/utils";
 import type { CorrelationPair } from "@/lib/types";
+import { WeeklyReviewCard } from "./WeeklyReviewCard";
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -83,6 +84,8 @@ export function AnalyticsPage() {
         <h2 className="text-xl font-semibold tracking-tight text-ink">Analytics</h2>
         <p className="text-sm text-ink-muted">Patterns across your history.</p>
       </div>
+
+      <WeeklyReviewCard />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiTile label="Completions" value={s.total_completions} />
