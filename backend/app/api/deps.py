@@ -8,6 +8,7 @@ from app.core.database import get_session
 from app.services.analytics_service import AnalyticsService
 from app.services.coach_service import CoachService
 from app.services.dashboard_service import DashboardService
+from app.services.focus_service import FocusService
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
 from app.services.notification_service import NotificationService
@@ -70,3 +71,7 @@ def search_service(session: Session = Depends(get_session)) -> SearchService:
 
 def coach_service(session: Session = Depends(get_session)) -> CoachService:
     return CoachService(session)
+
+
+def focus_service(session: Session = Depends(get_session)) -> FocusService:
+    return FocusService(session)

@@ -484,6 +484,33 @@ export interface CoachResponse {
   grounded_on?: string | null;
 }
 
+export interface FocusSession {
+  id: string;
+  started_at: string;
+  duration_min: number;
+  distractions: number;
+  note?: string | null;
+  task_id?: string | null;
+  created_at: string;
+}
+
+export interface FocusSessionCreate {
+  duration_min: number;
+  distractions?: number;
+  note?: string | null;
+  task_id?: string | null;
+  started_at?: string | null;
+}
+
+export interface FocusStats {
+  sessions_today: number;
+  minutes_today: number;
+  sessions_week: number;
+  minutes_week: number;
+  avg_distractions?: number | null;
+  best_day_minutes: number;
+}
+
 export interface WeeklyReview {
   start: string;
   end: string;

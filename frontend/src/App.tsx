@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { CalendarDays, Settings, Timer } from "lucide-react";
+import { CalendarDays, Settings } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PlanPage } from "@/features/plan/PlanPage";
 import { CoachPage } from "@/features/coach/CoachPage";
+import { FocusPage } from "@/features/focus/FocusPage";
 import { HabitsPage } from "@/features/habits/HabitsPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
@@ -35,17 +36,7 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/focus"
-          element={
-            <ComingSoon
-              title="Focus Mode"
-              icon={Timer}
-              phase="Phase 7"
-              description="A minimal Pomodoro / deep-work timer with a distraction counter and fullscreen calm."
-            />
-          }
-        />
+        <Route path="/focus" element={<FocusPage />} />
         <Route
           path="/settings"
           element={

@@ -8,6 +8,7 @@ import {
 import { api } from "@/lib/api";
 import type {
   CoachMessage,
+  FocusSessionCreate,
   Habit,
   HabitCreate,
   HabitLog,
@@ -185,6 +186,25 @@ export function useTimeline(kinds?: string) {
     queryFn: ({ pageParam }) => api.timeline({ limit, offset: pageParam, kinds }),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.has_more ? last.offset + last.limit : undefined),
+  });
+}
+
+export function useFocusStats() {
+  return useQuery({ queryKey: ["focus", "stats"], queryFn: api.focusStats });
+}
+
+export function useFocusRecent(limit = 8) {
+  return useQuery({ queryKey: ["focus", "recent", limit], queryFn: () => api.focusRecent(limit) });
+}
+
+export function useCreateFocus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: FocusSessionCreate) => api.createFocus(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["focus"] });
+      qc.invalidateQueries({ queryKey: ["timeline"] });
+    },
   });
 }
 

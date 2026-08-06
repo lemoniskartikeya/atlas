@@ -12,7 +12,10 @@ from typing import Iterable, Optional
 
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select
+
 from app.domain.enums import SUCCESS_STATUSES, HabitLogStatus
+from app.models.focus import FocusSession
 from app.models.habit import Habit
 from app.schemas.timeline import TimelineEvent, TimelineResponse
 from app.services import streaks
@@ -29,7 +32,7 @@ _STATUS_VERB = {
     HabitLogStatus.SKIPPED: "Skipped",
 }
 
-_ALL_KINDS = {"habit", "streak", "task", "journal", "habit_created"}
+_ALL_KINDS = {"habit", "streak", "task", "journal", "habit_created", "focus"}
 
 
 def _naive(dt: datetime) -> datetime:
@@ -103,6 +106,7 @@ class TimelineService:
 
         events.extend(self._task_events())
         events.extend(self._journal_events())
+        events.extend(self._focus_events())
         return events
 
     def _habit_log_events(self, habit: Habit) -> list[TimelineEvent]:
@@ -173,6 +177,24 @@ class TimelineService:
                     date=ts.date(),
                     title=f"Completed task — {task.title}",
                     route="/tasks",
+                )
+            )
+        return out
+
+    def _focus_events(self) -> list[TimelineEvent]:
+        out: list[TimelineEvent] = []
+        for fs in self.session.scalars(select(FocusSession)):
+            ts = _naive(fs.started_at)
+            detail = f"{fs.distractions} distraction{'s' if fs.distractions != 1 else ''}" if fs.distractions else None
+            out.append(
+                TimelineEvent(
+                    id=f"focus:{fs.id}",
+                    kind="focus",
+                    timestamp=ts,
+                    date=ts.date(),
+                    title=f"Focused for {fs.duration_min} min",
+                    detail=fs.note or detail,
+                    route="/focus",
                 )
             )
         return out

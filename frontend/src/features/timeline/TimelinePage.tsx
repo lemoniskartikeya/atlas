@@ -7,6 +7,7 @@ import {
   Flame,
   Plus,
   SkipForward,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -22,6 +23,7 @@ const FILTERS: { label: string; kinds?: string }[] = [
   { label: "Streaks", kinds: "streak" },
   { label: "Tasks", kinds: "task" },
   { label: "Journal", kinds: "journal" },
+  { label: "Focus", kinds: "focus" },
 ];
 
 const KIND: Record<string, { icon: LucideIcon; color: string }> = {
@@ -30,6 +32,7 @@ const KIND: Record<string, { icon: LucideIcon; color: string }> = {
   task: { icon: CheckCheck, color: "rgb(var(--success))" },
   journal: { icon: BookOpen, color: "rgb(var(--accent))" },
   habit_created: { icon: Plus, color: "rgb(var(--ink-faint))" },
+  focus: { icon: Zap, color: "rgb(var(--accent))" },
 };
 
 function dayLabel(iso: string): string {

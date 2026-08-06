@@ -5,6 +5,9 @@ import type {
   CoachStatus,
   CorrelationsResponse,
   Dashboard,
+  FocusSession,
+  FocusSessionCreate,
+  FocusStats,
   Habit,
   HabitCreate,
   HabitLog,
@@ -100,6 +103,11 @@ export const api = {
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
+
+  focusStats: () => http<FocusStats>("/focus/stats"),
+  focusRecent: (limit = 10) => http<FocusSession[]>(`/focus/sessions?limit=${limit}`),
+  createFocus: (body: FocusSessionCreate) =>
+    http<FocusSession>("/focus/sessions", { method: "POST", body: JSON.stringify(body) }),
 
   coachStatus: () => http<CoachStatus>("/coach/status"),
   coachAsk: (messages: CoachMessage[], useAi: boolean) =>

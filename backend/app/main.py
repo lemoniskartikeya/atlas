@@ -11,6 +11,7 @@ from app.api.v1 import (
     analytics,
     coach,
     dashboard,
+    focus,
     habits,
     journal,
     notifications,
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
         timeline.router,
         search.router,
         coach.router,
+        focus.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 
