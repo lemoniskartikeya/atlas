@@ -14,6 +14,8 @@ import type {
   PlanResponse,
   PredictionReport,
   PredictionsResponse,
+  SimulationRequest,
+  SimulationResponse,
   Task,
   TrainOutcome,
   WeeklyResponse,
@@ -87,6 +89,9 @@ export const api = {
   notifDismiss: (id: string) =>
     http<void>("/notifications/dismiss", { method: "POST", body: JSON.stringify({ id }) }),
   notifReadAll: () => http<void>("/notifications/read-all", { method: "POST" }),
+
+  simulate: (body: SimulationRequest) =>
+    http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

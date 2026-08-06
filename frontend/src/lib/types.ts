@@ -379,3 +379,36 @@ export interface NotificationsResponse {
   unread: number;
   notifications: NotificationItem[];
 }
+
+export interface SimulationRequest {
+  sleep_prev?: number | null;
+  energy_prev?: number | null;
+  mood_prev?: number | null;
+  min_rate?: number | null;
+  streak_in?: number | null;
+  time_of_day?: TimeOfDay | null;
+  habit_id?: string | null;
+  drop_habit_ids?: string[];
+}
+
+export interface SimHabitRow {
+  habit_id: string;
+  title: string;
+  color?: string | null;
+  done_today: boolean;
+  baseline: number;
+  simulated: number;
+  delta: number;
+}
+
+export interface SimulationResponse {
+  available: boolean;
+  reliability?: number | null;
+  due: number;
+  baseline_expected: number;
+  simulated_expected: number;
+  delta_expected: number;
+  levers: string[];
+  summary: string;
+  rows: SimHabitRow[];
+}

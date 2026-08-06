@@ -47,3 +47,25 @@ def habit_predictions(
         return None, None
     by_id = {p["habit_id"]: p for p in result.get("predictions", [])}
     return by_id, result.get("reliability")
+
+
+def simulate(session: Session, overrides: dict, today: Optional[date] = None) -> Optional[dict]:
+    """Run a what-if simulation, or ``None`` when no model is available.
+
+    Same cheap gate as :func:`habit_predictions`: only touch scikit-learn once a
+    trained model exists on disk.
+    """
+    try:
+        from app.learning import registry
+    except Exception:  # pragma: no cover - optional dependency missing
+        return None
+    if not registry.latest_meta():
+        return None
+    try:
+        from app.services.ml_service import MLService
+    except Exception:  # pragma: no cover - optional dependency missing
+        return None
+    try:
+        return MLService(session).simulate(overrides, today)
+    except Exception:  # pragma: no cover - defensive
+        return None

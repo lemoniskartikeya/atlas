@@ -15,6 +15,7 @@ from app.api.v1 import (
     notifications,
     planner,
     predictions,
+    simulator,
     tasks,
 )
 from app.core.config import get_settings
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
         planner.router,
         predictions.router,
         notifications.router,
+        simulator.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

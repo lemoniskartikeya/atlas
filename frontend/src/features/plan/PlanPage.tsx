@@ -16,6 +16,7 @@ import { useCompleteTask, useLogHabit, usePlan, useUnlogHabit } from "@/hooks/qu
 import { cn, formatLongDate, todayISO } from "@/lib/utils";
 import type { PlanBlock, PlanItem } from "@/lib/types";
 import { PlanOutlook } from "./PlanOutlook";
+import { HabitSimulator } from "./HabitSimulator";
 
 const BLOCK_ICON: Record<string, LucideIcon> = {
   morning: Sunrise,
@@ -238,6 +239,8 @@ export function PlanPage() {
       ) : (
         plan.blocks.map((block) => <BlockCard key={block.key} block={block} />)
       )}
+
+      <HabitSimulator />
 
       <p className="px-1 text-[11px] leading-relaxed text-ink-faint">
         {plan.model_backed

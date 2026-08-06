@@ -11,7 +11,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.learning import features, registry
+from app.learning import features, registry, simulate
 from app.learning.model import train_model
 
 MIN_SAMPLES = 40
@@ -130,3 +130,104 @@ class MLService:
             "metrics": metrics,
             "predictions": predictions,
         }
+
+    def simulate(self, overrides: dict, today: Optional[date] = None) -> dict:
+        """Counterfactual: re-score today's due habits under a what-if scenario.
+
+        Returns baseline vs. simulated completion probability per habit, the
+        change in expected completions, and human-readable levers. Out-of-model
+        levers (features the model dropped as uninformative) simply show no
+        effect — which is itself honest.
+        """
+        bundle = registry.latest_bundle()
+        if not bundle:
+            return {"available": False}
+        model = bundle["model"]
+        kept = bundle.get("kept_indices")
+
+        def prob(vec) -> float:
+            model_vec = vec[kept] if kept is not None else vec
+            return float(model.predict_proba(model_vec.reshape(1, -1))[0, 1])
+
+        rows_in = features.build_inference(self.session, today)
+        metrics = bundle.get("metrics", {})
+        reliability = metrics.get("roc_auc") or metrics.get("accuracy")
+        if not rows_in:
+            return {
+                "available": True,
+                "reliability": reliability,
+                "due": 0,
+                "rows": [],
+                "levers": simulate.describe_levers(overrides, {}),
+                "summary": "Nothing due today to simulate.",
+            }
+
+        baseline_ctx = simulate.baseline_wellbeing(rows_in[0][1])
+        drop = set(overrides.get("drop_habit_ids") or [])
+        scope = overrides.get("habit_id")
+
+        rows: list[dict] = []
+        base_expected = sim_expected = 0.0
+        for habit, vec, done in rows_in:
+            if habit.id in drop:
+                continue
+            base = prob(vec)
+            if scope and habit.id != scope:
+                sim = base  # scenario scoped to another habit — leave this one flat
+            else:
+                sim = prob(simulate.apply_overrides(vec, overrides))
+            if not done:
+                base_expected += base
+                sim_expected += sim
+            rows.append(
+                {
+                    "habit_id": habit.id,
+                    "title": habit.title,
+                    "color": habit.color,
+                    "done_today": done,
+                    "baseline": round(base, 3),
+                    "simulated": round(sim, 3),
+                    "delta": round(sim - base, 3),
+                }
+            )
+
+        rows.sort(key=lambda r: r["delta"], reverse=True)
+        levers = simulate.describe_levers(overrides, baseline_ctx)
+        delta_expected = sim_expected - base_expected
+
+        return {
+            "available": True,
+            "reliability": reliability,
+            "due": len(rows),
+            "baseline_expected": round(base_expected, 2),
+            "simulated_expected": round(sim_expected, 2),
+            "delta_expected": round(delta_expected, 2),
+            "levers": levers,
+            "summary": self._sim_summary(levers, base_expected, sim_expected, rows),
+            "rows": rows,
+        }
+
+    @staticmethod
+    def _sim_summary(
+        levers: list[str], base_expected: float, sim_expected: float, rows: list[dict]
+    ) -> str:
+        if not levers:
+            return "Adjust a lever to see the impact on today's completions."
+        delta = sim_expected - base_expected
+        if delta > 0.05:
+            verb = "lifts"
+        elif delta < -0.05:
+            verb = "lowers"
+        else:
+            verb = "barely changes"
+        sign = "+" if delta >= 0 else ""
+        summary = (
+            f"This {verb} expected completions from {base_expected:.1f} to "
+            f"{sim_expected:.1f} ({sign}{delta:.1f})."
+        )
+        movers = [r for r in rows if not r["done_today"] and abs(r["delta"]) >= 0.01]
+        if movers:
+            top = max(movers, key=lambda r: abs(r["delta"]))
+            tsign = "+" if top["delta"] >= 0 else ""
+            summary += f" Biggest change: {top['title']} {tsign}{round(top['delta'] * 100)}%."
+        return summary

@@ -1,6 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { Habit, HabitCreate, HabitLog, JournalEntry, Task } from "@/lib/types";
+import type {
+  Habit,
+  HabitCreate,
+  HabitLog,
+  JournalEntry,
+  SimulationRequest,
+  Task,
+} from "@/lib/types";
 
 export const keys = {
   dashboard: ["dashboard"] as const,
@@ -43,6 +55,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["plan"] });
     qc.invalidateQueries({ queryKey: ["predictions"] });
     qc.invalidateQueries({ queryKey: ["notifications"] });
+    qc.invalidateQueries({ queryKey: ["simulation"] });
   };
 }
 
@@ -152,6 +165,15 @@ export function usePredictions() {
   return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
 }
 
+export function useSimulation(body: SimulationRequest, enabled: boolean) {
+  return useQuery({
+    queryKey: ["simulation", body],
+    queryFn: () => api.simulate(body),
+    enabled,
+    placeholderData: keepPreviousData, // keep prior results while re-scoring
+  });
+}
+
 export function useNotifications() {
   return useQuery({
     queryKey: ["notifications"],
@@ -201,6 +223,7 @@ export function useTrainModel() {
       qc.invalidateQueries({ queryKey: keys.dashboard });
       qc.invalidateQueries({ queryKey: ["plan"] });  // ordering is model-shaped
       qc.invalidateQueries({ queryKey: ["predictions"] });
+      qc.invalidateQueries({ queryKey: ["simulation"] });
     },
   });
 }

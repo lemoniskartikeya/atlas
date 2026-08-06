@@ -12,6 +12,7 @@ from app.services.journal_service import JournalService
 from app.services.notification_service import NotificationService
 from app.services.planner_service import PlannerService
 from app.services.prediction_service import PredictionService
+from app.services.simulation_service import SimulationService
 from app.services.task_service import TaskService
 
 
@@ -45,3 +46,7 @@ def prediction_service(session: Session = Depends(get_session)) -> PredictionSer
 
 def notification_service(session: Session = Depends(get_session)) -> NotificationService:
     return NotificationService(session)
+
+
+def simulation_service(session: Session = Depends(get_session)) -> SimulationService:
+    return SimulationService(session)
