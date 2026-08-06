@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        # Tauri desktop shell origins (Phase 7) — so a packaged build reaching an
+        # absolute API base is allowed. Dev proxies /api through Vite and needs none.
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
     ]
 
     data_dir: str = (BASE_DIR / "data").as_posix()
