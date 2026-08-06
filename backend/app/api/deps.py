@@ -9,6 +9,7 @@ from app.services.analytics_service import AnalyticsService
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
+from app.services.planner_service import PlannerService
 from app.services.task_service import TaskService
 
 
@@ -30,3 +31,7 @@ def analytics_service(session: Session = Depends(get_session)) -> AnalyticsServi
 
 def dashboard_service(session: Session = Depends(get_session)) -> DashboardService:
     return DashboardService(session)
+
+
+def planner_service(session: Session = Depends(get_session)) -> PlannerService:
+    return PlannerService(session)

@@ -287,3 +287,39 @@ export interface PredictionsResponse {
   metrics?: MLMetrics | null;
   predictions: HabitPrediction[];
 }
+
+export interface PlanItem {
+  id: string;
+  kind: "habit" | "task";
+  title: string;
+  color?: string | null;
+  duration_min?: number | null;
+  priority?: string | null;
+  done: boolean;
+  probability?: number | null;
+  risk?: "at-risk" | "steady" | null;
+  reason: string;
+  confidence: number;
+}
+
+export interface PlanBlock {
+  key: string;
+  label: string;
+  window: string;
+  is_now: boolean;
+  minutes: number;
+  items: PlanItem[];
+}
+
+export interface PlanResponse {
+  date: string;
+  generated_at: string;
+  now_hour: number;
+  now_block: string;
+  model_backed: boolean;
+  reliability?: number | null;
+  summary: string;
+  open_count: number;
+  total_minutes: number;
+  blocks: PlanBlock[];
+}

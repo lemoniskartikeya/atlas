@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.models  # noqa: F401  -- ensure every table is registered on Base.metadata
-from app.api.v1 import analytics, dashboard, habits, journal, tasks
+from app.api.v1 import analytics, dashboard, habits, journal, planner, tasks
 from app.core.config import get_settings
 from app.core.database import engine
 from app.core.logging import configure_logging, get_logger
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
         journal.router,
         dashboard.router,
         analytics.router,
+        planner.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

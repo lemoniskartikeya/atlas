@@ -10,6 +10,7 @@ import type {
   Heatmap,
   JournalEntry,
   MLStatus,
+  PlanResponse,
   PredictionsResponse,
   Task,
   TrainOutcome,
@@ -74,6 +75,8 @@ export const api = {
   mlStatus: () => http<MLStatus>("/ml/status"),
   mlPredictions: () => http<PredictionsResponse>("/ml/predictions"),
   trainModel: () => http<TrainOutcome>("/ml/train", { method: "POST" }),
+
+  plan: () => http<PlanResponse>("/planner/today"),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

@@ -3,6 +3,7 @@ import { CalendarDays, Settings, Timer } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { PlanPage } from "@/features/plan/PlanPage";
 import { HabitsPage } from "@/features/habits/HabitsPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
@@ -13,6 +14,7 @@ export default function App() {
     <AppShell>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/plan" element={<PlanPage />} />
         <Route path="/habits" element={<HabitsPage />} />
 
         <Route path="/tasks" element={<TasksPage />} />

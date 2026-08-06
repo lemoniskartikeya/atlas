@@ -8,6 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import Difficulty, Frequency, HabitLogStatus, Priority, TimeOfDay
 
+# A field literally named ``date`` shadows the ``date`` type during pydantic's
+# deferred-annotation resolution (``from __future__ import annotations`` + a
+# ``= None`` default), collapsing the field to NoneType. Reference the type via
+# this alias so a ``date`` field keeps its real type.
+_Date = date
+
 
 class HabitBase(BaseModel):
     title: str = Field(min_length=1, max_length=200)
@@ -49,7 +55,7 @@ class HabitUpdate(BaseModel):
 
 
 class HabitLogCreate(BaseModel):
-    date: Optional[date] = None  # defaults to today server-side
+    date: Optional[_Date] = None  # defaults to today server-side
     status: HabitLogStatus = HabitLogStatus.COMPLETED
     partial_amount: Optional[float] = None
     reason: Optional[str] = None
