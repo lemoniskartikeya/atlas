@@ -14,6 +14,7 @@ import {
   TodayHabitsCard,
   WellbeingCard,
 } from "./widgets";
+import { ForecastCard } from "./ForecastCard";
 
 function HeroHeader({
   greeting,
@@ -107,6 +108,7 @@ export function DashboardPage() {
           />
         </div>
         <div className="space-y-4 lg:col-span-5">
+          <ForecastCard />
           <RecommendationsCard recs={d.recommendations} />
           <WellbeingCard mood={d.mood} energy={d.energy} sleep={d.sleep_hours} />
           <StreaksCard streaks={d.top_streaks} />

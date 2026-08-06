@@ -244,3 +244,46 @@ export interface CorrelationPair {
 export interface CorrelationsResponse {
   pairs: CorrelationPair[];
 }
+
+export interface MLMetrics {
+  accuracy?: number | null;
+  roc_auc?: number | null;
+  brier?: number | null;
+  n_train?: number | null;
+  n_test?: number | null;
+  positive_rate?: number | null;
+}
+
+export interface MLStatus {
+  trained: boolean;
+  version?: string | null;
+  trained_at?: string | null;
+  model_type?: string | null;
+  metrics?: MLMetrics | null;
+}
+
+export interface TrainOutcome {
+  trained: boolean;
+  version?: string | null;
+  metrics?: MLMetrics | null;
+  n_samples?: number | null;
+  reason?: string | null;
+}
+
+export interface HabitPrediction {
+  habit_id: string;
+  title: string;
+  color?: string | null;
+  probability: number;
+  done_today: boolean;
+  explanation: string;
+}
+
+export interface PredictionsResponse {
+  trained: boolean;
+  version?: string | null;
+  model_type?: string | null;
+  reliability?: number | null;
+  metrics?: MLMetrics | null;
+  predictions: HabitPrediction[];
+}

@@ -140,3 +140,22 @@ export function useAnalyticsCorrelations(days = 90) {
     queryFn: () => api.analyticsCorrelations(days),
   });
 }
+
+export function useMlPredictions() {
+  return useQuery({ queryKey: ["ml", "predictions"], queryFn: api.mlPredictions, retry: false });
+}
+
+export function useMlStatus() {
+  return useQuery({ queryKey: ["ml", "status"], queryFn: api.mlStatus, retry: false });
+}
+
+export function useTrainModel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.trainModel,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ml"] });
+      qc.invalidateQueries({ queryKey: keys.dashboard });
+    },
+  });
+}

@@ -9,7 +9,10 @@ import type {
   HabitWithStats,
   Heatmap,
   JournalEntry,
+  MLStatus,
+  PredictionsResponse,
   Task,
+  TrainOutcome,
   WeeklyResponse,
 } from "./types";
 
@@ -67,6 +70,10 @@ export const api = {
   analyticsWeekly: (weeks = 12) => http<WeeklyResponse>(`/analytics/weekly?weeks=${weeks}`),
   analyticsCorrelations: (days = 90) =>
     http<CorrelationsResponse>(`/analytics/correlations?days=${days}`),
+
+  mlStatus: () => http<MLStatus>("/ml/status"),
+  mlPredictions: () => http<PredictionsResponse>("/ml/predictions"),
+  trainModel: () => http<TrainOutcome>("/ml/train", { method: "POST" }),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

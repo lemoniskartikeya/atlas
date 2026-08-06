@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import os
+import tempfile
 
 # Point the app at throwaway settings *before* importing anything that reads them.
 os.environ["ATLAS_DATABASE_URL"] = "sqlite:///./test_atlas_ignored.db"
 os.environ["ATLAS_AUTO_CREATE_TABLES"] = "false"
+# Keep trained model artifacts out of the real data dir during tests.
+os.environ.setdefault("ATLAS_DATA_DIR", tempfile.mkdtemp(prefix="atlas_test_models_"))
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

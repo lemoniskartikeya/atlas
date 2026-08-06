@@ -1,0 +1,7 @@
+# Phase 4 — ML learning layer dependencies.
+# Installed separately from requirements.txt to keep the base runtime lightweight.
+# HistGradientBoostingClassifier (scikit-learn) is the first real model; XGBoost /
+# LightGBM can slot in later behind the same MLService interface.
+scikit-learn>=1.4,<2
+joblib>=1.3
+numpy>=1.26

@@ -49,6 +49,14 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router, prefix=API_PREFIX)
 
+    # ML endpoints are optional — the app still runs if the ML deps aren't installed.
+    try:
+        from app.api.v1 import ml
+
+        app.include_router(ml.router, prefix=API_PREFIX)
+    except Exception as exc:  # pragma: no cover - depends on optional install
+        log.warning("ml.router_unavailable", extra={"error": str(exc)})
+
     @app.get(f"{API_PREFIX}/health", tags=["health"])
     def health():
         return {
