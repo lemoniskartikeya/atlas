@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_session
 from app.services.analytics_service import AnalyticsService
+from app.services.coach_service import CoachService
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
@@ -65,3 +66,7 @@ def timeline_service(session: Session = Depends(get_session)) -> TimelineService
 
 def search_service(session: Session = Depends(get_session)) -> SearchService:
     return SearchService(session)
+
+
+def coach_service(session: Session = Depends(get_session)) -> CoachService:
+    return CoachService(session)

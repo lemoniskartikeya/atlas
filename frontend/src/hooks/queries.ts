@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
+  CoachMessage,
   Habit,
   HabitCreate,
   HabitLog,
@@ -184,6 +185,17 @@ export function useTimeline(kinds?: string) {
     queryFn: ({ pageParam }) => api.timeline({ limit, offset: pageParam, kinds }),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.has_more ? last.offset + last.limit : undefined),
+  });
+}
+
+export function useCoachStatus() {
+  return useQuery({ queryKey: ["coach", "status"], queryFn: api.coachStatus, retry: false });
+}
+
+export function useCoachAsk() {
+  return useMutation({
+    mutationFn: (v: { messages: CoachMessage[]; useAi: boolean }) =>
+      api.coachAsk(v.messages, v.useAi),
   });
 }
 

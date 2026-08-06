@@ -466,6 +466,24 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 
+export interface CoachStatus {
+  ai_available: boolean;
+  provider?: string | null;
+  model?: string | null;
+}
+
+export interface CoachMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface CoachResponse {
+  reply: string;
+  mode: "ai" | "local";
+  model?: string | null;
+  grounded_on?: string | null;
+}
+
 export interface WeeklyReview {
   start: string;
   end: string;

@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ComingSoon } from "@/components/common/ComingSoon";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PlanPage } from "@/features/plan/PlanPage";
+import { CoachPage } from "@/features/coach/CoachPage";
 import { HabitsPage } from "@/features/habits/HabitsPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
@@ -16,6 +17,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/plan" element={<PlanPage />} />
+        <Route path="/coach" element={<CoachPage />} />
         <Route path="/habits" element={<HabitsPage />} />
 
         <Route path="/tasks" element={<TasksPage />} />

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,6 +41,12 @@ class Settings(BaseSettings):
     ]
 
     data_dir: str = (BASE_DIR / "data").as_posix()
+
+    # AI coach (opt-in). When a key is set AND the `anthropic` package is installed,
+    # the coach can call the Claude API — which sends a compact digest of the user's
+    # data to Anthropic. Unset by default: the coach runs fully local/offline.
+    anthropic_api_key: Optional[str] = None
+    coach_model: str = "claude-opus-5"
 
 
 @lru_cache

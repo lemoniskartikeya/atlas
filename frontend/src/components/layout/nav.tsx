@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Bot,
   CalendarCheck,
   CalendarDays,
   History,
@@ -22,6 +23,7 @@ export interface NavItemDef {
 export const NAV: NavItemDef[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/plan", label: "Plan", icon: CalendarCheck },
+  { to: "/coach", label: "Coach", icon: Bot },
   { to: "/habits", label: "Habits", icon: Repeat2 },
   { to: "/tasks", label: "Tasks", icon: ListTodo },
   { to: "/journal", label: "Journal", icon: BookOpen },

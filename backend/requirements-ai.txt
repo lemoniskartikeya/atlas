@@ -1,0 +1,5 @@
+# Optional AI-coach dependency. Install separately to enable the Claude-powered
+# coach (the app runs a fully local coach without it):
+#   pip install -r requirements-ai.txt
+# and set ATLAS_ANTHROPIC_API_KEY. See docs/ROADMAP.md (Phase 6).
+anthropic>=0.69

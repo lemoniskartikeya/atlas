@@ -1,5 +1,8 @@
 import type {
   AnalyticsSummary,
+  CoachMessage,
+  CoachResponse,
+  CoachStatus,
   CorrelationsResponse,
   Dashboard,
   Habit,
@@ -97,6 +100,13 @@ export const api = {
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
+
+  coachStatus: () => http<CoachStatus>("/coach/status"),
+  coachAsk: (messages: CoachMessage[], useAi: boolean) =>
+    http<CoachResponse>("/coach/ask", {
+      method: "POST",
+      body: JSON.stringify({ messages, use_ai: useAi }),
+    }),
 
   search: (q: string, limit = 8) =>
     http<SearchResponse>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`),
