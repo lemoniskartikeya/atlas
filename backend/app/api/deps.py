@@ -9,6 +9,7 @@ from app.services.analytics_service import AnalyticsService
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
+from app.services.notification_service import NotificationService
 from app.services.planner_service import PlannerService
 from app.services.prediction_service import PredictionService
 from app.services.task_service import TaskService
@@ -40,3 +41,7 @@ def planner_service(session: Session = Depends(get_session)) -> PlannerService:
 
 def prediction_service(session: Session = Depends(get_session)) -> PredictionService:
     return PredictionService(session)
+
+
+def notification_service(session: Session = Depends(get_session)) -> NotificationService:
+    return NotificationService(session)

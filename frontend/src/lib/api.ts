@@ -10,6 +10,7 @@ import type {
   Heatmap,
   JournalEntry,
   MLStatus,
+  NotificationsResponse,
   PlanResponse,
   PredictionReport,
   PredictionsResponse,
@@ -79,6 +80,13 @@ export const api = {
 
   plan: () => http<PlanResponse>("/planner/today"),
   predictions: () => http<PredictionReport>("/predictions"),
+
+  notifications: () => http<NotificationsResponse>("/notifications"),
+  notifRead: (id: string) =>
+    http<void>("/notifications/read", { method: "POST", body: JSON.stringify({ id }) }),
+  notifDismiss: (id: string) =>
+    http<void>("/notifications/dismiss", { method: "POST", body: JSON.stringify({ id }) }),
+  notifReadAll: () => http<void>("/notifications/read-all", { method: "POST" }),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

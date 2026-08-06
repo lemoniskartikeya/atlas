@@ -42,6 +42,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["analytics"] });
     qc.invalidateQueries({ queryKey: ["plan"] });
     qc.invalidateQueries({ queryKey: ["predictions"] });
+    qc.invalidateQueries({ queryKey: ["notifications"] });
   };
 }
 
@@ -149,6 +150,38 @@ export function usePlan() {
 
 export function usePredictions() {
   return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: api.notifications,
+    refetchInterval: 60_000, // poll so nudges surface as the day moves
+  });
+}
+
+export function useNotifRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.notifRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useNotifDismiss() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.notifDismiss(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useNotifReadAll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.notifReadAll(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
 }
 
 export function useMlPredictions() {

@@ -361,3 +361,21 @@ export interface PredictionReport {
   streak_risks: StreakRisk[];
   burnout: BurnoutSignal;
 }
+
+export interface NotificationItem {
+  id: string;
+  kind: string; // "brief" | "risk" | "streak" | "task" | "wellbeing" | "eod"
+  priority: "high" | "medium" | "low";
+  title: string;
+  body: string;
+  reason: string;
+  action_label?: string | null;
+  action_route?: string | null;
+  read: boolean;
+}
+
+export interface NotificationsResponse {
+  generated_at: string;
+  unread: number;
+  notifications: NotificationItem[];
+}

@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { Search } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationCenter } from "@/features/notifications/NotificationCenter";
 import { titleForPath } from "./nav";
 
 export function Topbar({ onOpenPalette }: { onOpenPalette: () => void }) {
@@ -24,6 +25,7 @@ export function Topbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         >
           <Search size={16} />
         </button>
+        <NotificationCenter />
         <ThemeToggle />
       </div>
     </header>
