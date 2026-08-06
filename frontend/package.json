@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:tauri": "tsc --noEmit && vite build --mode tauri",
     "preview": "vite preview --port 5173",
     "tauri": "tauri"
   },
