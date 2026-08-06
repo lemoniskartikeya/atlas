@@ -8,6 +8,7 @@ import { HabitsPage } from "@/features/habits/HabitsPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
+import { TimelinePage } from "@/features/timeline/TimelinePage";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/journal" element={<JournalPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
         <Route
           path="/calendar"
           element={

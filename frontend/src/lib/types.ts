@@ -428,6 +428,26 @@ export interface ReviewItem {
   habit_id?: string | null;
 }
 
+export interface TimelineEvent {
+  id: string;
+  kind: "habit" | "streak" | "task" | "journal" | "habit_created";
+  timestamp: string;
+  date: string;
+  title: string;
+  detail?: string | null;
+  status?: string | null;
+  color?: string | null;
+  route?: string | null;
+}
+
+export interface TimelineResponse {
+  events: TimelineEvent[];
+  offset: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+}
+
 export interface WeeklyReview {
   start: string;
   end: string;

@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarCheck,
   CalendarDays,
+  History,
   LayoutDashboard,
   ListTodo,
   Repeat2,
@@ -25,6 +26,7 @@ export const NAV: NavItemDef[] = [
   { to: "/tasks", label: "Tasks", icon: ListTodo },
   { to: "/journal", label: "Journal", icon: BookOpen },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/timeline", label: "Timeline", icon: History },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/focus", label: "Focus", icon: Timer },
 ];

@@ -18,6 +18,7 @@ from app.api.v1 import (
     review,
     simulator,
     tasks,
+    timeline,
 )
 from app.core.config import get_settings
 from app.core.database import engine
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
         notifications.router,
         simulator.router,
         review.router,
+        timeline.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

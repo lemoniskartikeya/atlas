@@ -17,6 +17,7 @@ import type {
   SimulationRequest,
   SimulationResponse,
   Task,
+  TimelineResponse,
   WeeklyReview,
   TrainOutcome,
   WeeklyResponse,
@@ -95,6 +96,14 @@ export const api = {
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
+
+  timeline: (params: { limit?: number; offset?: number; kinds?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit != null) q.set("limit", String(params.limit));
+    if (params.offset != null) q.set("offset", String(params.offset));
+    if (params.kinds) q.set("kinds", params.kinds);
+    return http<TimelineResponse>(`/timeline?${q.toString()}`);
+  },
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

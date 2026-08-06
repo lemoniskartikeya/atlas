@@ -15,6 +15,7 @@ from app.services.prediction_service import PredictionService
 from app.services.review_service import WeeklyReviewService
 from app.services.simulation_service import SimulationService
 from app.services.task_service import TaskService
+from app.services.timeline_service import TimelineService
 
 
 def habit_service(session: Session = Depends(get_session)) -> HabitService:
@@ -55,3 +56,7 @@ def simulation_service(session: Session = Depends(get_session)) -> SimulationSer
 
 def review_service(session: Session = Depends(get_session)) -> WeeklyReviewService:
     return WeeklyReviewService(session)
+
+
+def timeline_service(session: Session = Depends(get_session)) -> TimelineService:
+    return TimelineService(session)

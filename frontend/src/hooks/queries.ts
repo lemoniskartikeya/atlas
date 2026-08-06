@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -57,6 +58,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["notifications"] });
     qc.invalidateQueries({ queryKey: ["simulation"] });
     qc.invalidateQueries({ queryKey: ["review"] });
+    qc.invalidateQueries({ queryKey: ["timeline"] });
   };
 }
 
@@ -164,6 +166,16 @@ export function usePlan() {
 
 export function usePredictions() {
   return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
+}
+
+export function useTimeline(kinds?: string) {
+  const limit = 40;
+  return useInfiniteQuery({
+    queryKey: ["timeline", kinds ?? "all"],
+    queryFn: ({ pageParam }) => api.timeline({ limit, offset: pageParam, kinds }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => (last.has_more ? last.offset + last.limit : undefined),
+  });
 }
 
 export function useWeeklyReview(offset: number) {
