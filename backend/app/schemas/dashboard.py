@@ -71,3 +71,4 @@ class DashboardResponse(BaseModel):
     recent_journal: Optional[JournalRead] = None
 
     recommendations: list[Recommendation]
+    recommendations_model_backed: bool = False  # True when the model drove the ranking

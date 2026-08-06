@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Brain,
   Check,
   Clock,
   Flame,
@@ -277,12 +278,27 @@ export function TasksTodayCard({
 
 /* -------------------------------------------------------- recommendations */
 
-export function RecommendationsCard({ recs }: { recs: Recommendation[] }) {
+export function RecommendationsCard({
+  recs,
+  modelBacked = false,
+}: {
+  recs: Recommendation[];
+  modelBacked?: boolean;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Insights for today</CardTitle>
-        <Sparkles size={15} className="text-accent" />
+        {modelBacked ? (
+          <span
+            title="The riskiest habits are ranked by your trained completion model"
+            className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent"
+          >
+            <Brain size={11} /> model
+          </span>
+        ) : (
+          <Sparkles size={15} className="text-accent" />
+        )}
       </CardHeader>
       <CardBody className="space-y-2.5">
         {recs.length === 0 && (
@@ -314,7 +330,9 @@ export function RecommendationsCard({ recs }: { recs: Recommendation[] }) {
           );
         })}
         <p className="pt-1 text-[10px] leading-relaxed text-ink-faint">
-          Rule-based insights, each with its reasoning — learned models arrive with the ML layer.
+          {modelBacked
+            ? "Model-driven — the riskiest habits lead, each with the reasoning behind it."
+            : "Rule-based insights, each with its reasoning — train the model to personalize them."}
         </p>
       </CardBody>
     </Card>

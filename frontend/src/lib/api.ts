@@ -11,6 +11,7 @@ import type {
   JournalEntry,
   MLStatus,
   PlanResponse,
+  PredictionReport,
   PredictionsResponse,
   Task,
   TrainOutcome,
@@ -77,6 +78,7 @@ export const api = {
   trainModel: () => http<TrainOutcome>("/ml/train", { method: "POST" }),
 
   plan: () => http<PlanResponse>("/planner/today"),
+  predictions: () => http<PredictionReport>("/predictions"),
 
   journalRecent: (limit = 14) => http<JournalEntry[]>(`/journal?limit=${limit}`),
   journal: (date: string) => http<JournalEntry>(`/journal/${date}`),

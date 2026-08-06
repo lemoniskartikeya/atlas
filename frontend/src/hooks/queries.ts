@@ -41,6 +41,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["tasks"] });
     qc.invalidateQueries({ queryKey: ["analytics"] });
     qc.invalidateQueries({ queryKey: ["plan"] });
+    qc.invalidateQueries({ queryKey: ["predictions"] });
   };
 }
 
@@ -146,6 +147,10 @@ export function usePlan() {
   return useQuery({ queryKey: ["plan"], queryFn: api.plan });
 }
 
+export function usePredictions() {
+  return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
+}
+
 export function useMlPredictions() {
   return useQuery({ queryKey: ["ml", "predictions"], queryFn: api.mlPredictions, retry: false });
 }
@@ -162,6 +167,7 @@ export function useTrainModel() {
       qc.invalidateQueries({ queryKey: ["ml"] });
       qc.invalidateQueries({ queryKey: keys.dashboard });
       qc.invalidateQueries({ queryKey: ["plan"] });  // ordering is model-shaped
+      qc.invalidateQueries({ queryKey: ["predictions"] });
     },
   });
 }

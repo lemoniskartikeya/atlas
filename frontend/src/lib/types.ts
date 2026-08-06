@@ -166,6 +166,7 @@ export interface Dashboard {
   sleep_hours?: number | null;
   recent_journal?: JournalEntry | null;
   recommendations: Recommendation[];
+  recommendations_model_backed: boolean;
 }
 
 export interface HeatmapCell {
@@ -322,4 +323,41 @@ export interface PlanResponse {
   open_count: number;
   total_minutes: number;
   blocks: PlanBlock[];
+}
+
+export interface ExpectedCompletion {
+  due: number;
+  done: number;
+  remaining: number;
+  expected_total: number;
+  expected_rate: number;
+  confidence?: number | null;
+  model_backed: boolean;
+  reason: string;
+}
+
+export interface StreakRisk {
+  habit_id: string;
+  title: string;
+  current_streak: number;
+  probability?: number | null;
+  risk: number;
+  level: "high" | "medium";
+  reason: string;
+}
+
+export interface BurnoutSignal {
+  score: number;
+  level: "low" | "moderate" | "elevated";
+  drivers: string[];
+  reason: string;
+}
+
+export interface PredictionReport {
+  date: string;
+  model_backed: boolean;
+  reliability?: number | null;
+  expected_completion: ExpectedCompletion;
+  streak_risks: StreakRisk[];
+  burnout: BurnoutSignal;
 }

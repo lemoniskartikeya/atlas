@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import Priority, SUCCESS_STATUSES, TimeOfDay
 from app.schemas.planner import PlanBlock, PlanItem, PlanResponse
+from app.services import ml_gateway
 from app.services.habit_service import HabitService
 from app.services.task_service import TaskService
 
@@ -299,20 +300,5 @@ class PlannerService:
     def _ml_predictions(
         self, today: date
     ) -> tuple[Optional[dict[str, dict]], Optional[float]]:
-        """Return ({habit_id: prediction}, reliability) or (None, None).
-
-        Imported lazily and defensively so the planner works with or without the
-        optional ML stack and with or without a trained model on disk.
-        """
-        try:
-            from app.services.ml_service import MLService
-        except Exception:  # pragma: no cover - optional dependency missing
-            return None, None
-        try:
-            result = MLService(self.session).predict_today(today)
-        except Exception:  # pragma: no cover - defensive
-            return None, None
-        if not result.get("trained"):
-            return None, None
-        by_id = {p["habit_id"]: p for p in result.get("predictions", [])}
-        return by_id, result.get("reliability")
+        """Today's completion probabilities via the shared, guarded ML gateway."""
+        return ml_gateway.habit_predictions(self.session, today)

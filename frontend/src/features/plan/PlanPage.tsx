@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCompleteTask, useLogHabit, usePlan, useUnlogHabit } from "@/hooks/queries";
 import { cn, formatLongDate, todayISO } from "@/lib/utils";
 import type { PlanBlock, PlanItem } from "@/lib/types";
+import { PlanOutlook } from "./PlanOutlook";
 
 const BLOCK_ICON: Record<string, LucideIcon> = {
   morning: Sunrise,
@@ -225,6 +226,8 @@ export function PlanPage() {
           </div>
         </div>
       </Card>
+
+      <PlanOutlook />
 
       {plan.blocks.length === 0 ? (
         <Card className="p-8 text-center">

@@ -14,17 +14,13 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import SUCCESS_STATUSES, TimeOfDay
 from app.models.habit import Habit
-from app.schemas.dashboard import (
-    DashboardResponse,
-    HabitTodayItem,
-    Recommendation,
-    StreakItem,
-)
+from app.schemas.dashboard import DashboardResponse, HabitTodayItem, StreakItem
 from app.schemas.journal import JournalRead
 from app.schemas.task import TaskRead
-from app.services import streaks
+from app.services import ml_gateway, streaks
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
+from app.services.recommender import Recommender
 from app.services.task_service import TaskService
 
 _TOD_ORDER = {
@@ -126,7 +122,10 @@ class DashboardService:
         )
         life_trend = self._life_trend(habits, today)
 
-        recommendations = self._recommendations(
+        predictions, reliability = ml_gateway.habit_predictions(self.session, today)
+        recommendations = Recommender(
+            predictions=predictions, reliability=reliability
+        ).build(
             habits_today=habits_today,
             weekly_consistency=weekly_consistency,
             journal=latest_journal,
@@ -153,6 +152,7 @@ class DashboardService:
             sleep_hours=sleep_hours,
             recent_journal=recent_journal,
             recommendations=recommendations,
+            recommendations_model_backed=predictions is not None,
         )
 
     # ----------------------------------------------------------------- scoring
@@ -205,95 +205,3 @@ class DashboardService:
                     num += 1
             trend.append(round(100 * num / den, 1) if den else 0.0)
         return trend
-
-    # -------------------------------------------------------- recommendations
-    def _recommendations(
-        self,
-        habits_today: list[HabitTodayItem],
-        weekly_consistency: float,
-        journal,
-        suggested: Optional[TaskRead],
-        now_hour: int,
-    ) -> list[Recommendation]:
-        recs: list[Recommendation] = []
-
-        # 1) Protect a live streak that isn't logged yet today.
-        for item in habits_today:
-            if not item.done_today and item.current_streak >= 3:
-                conf = min(0.95, 0.5 + item.current_streak * 0.03 + (0.1 if now_hour >= 17 else 0))
-                recs.append(
-                    Recommendation(
-                        id=f"streak-{item.id}",
-                        kind="habit",
-                        title=f"Keep your {item.current_streak}-day streak on “{item.title}”",
-                        detail="Still open today — a quick win now protects the streak.",
-                        confidence=round(conf, 2),
-                        reason=(
-                            f"“{item.title}” has a {item.current_streak}-day run and isn't "
-                            "logged yet today."
-                        ),
-                    )
-                )
-
-        # 2) Low weekly consistency -> suggest a lighter, focused day.
-        if habits_today and weekly_consistency < 0.5:
-            recs.append(
-                Recommendation(
-                    id="consistency-low",
-                    kind="wellbeing",
-                    title="Aim for a lighter, focused day",
-                    detail="Pick 1–2 keystone habits to win rather than spreading thin.",
-                    confidence=0.6,
-                    reason=(
-                        f"You completed {round(weekly_consistency * 100)}% of due "
-                        "habit-days over the last 7 days."
-                    ),
-                )
-            )
-
-        # 3) Short sleep -> protect energy.
-        if journal is not None and journal.sleep_hours is not None and journal.sleep_hours < 6.5:
-            recs.append(
-                Recommendation(
-                    id="sleep-low",
-                    kind="wellbeing",
-                    title="You slept less than usual",
-                    detail="Front-load easy work and protect one deep-work block.",
-                    confidence=0.55,
-                    reason=f"Your latest journal logged {journal.sleep_hours}h of sleep (< 6.5h).",
-                )
-            )
-
-        # 4) Morning window still open.
-        morning_open = [
-            i for i in habits_today
-            if not i.done_today and i.time_preference == TimeOfDay.MORNING
-        ]
-        if morning_open and now_hour < 14:
-            names = ", ".join(f"“{i.title}”" for i in morning_open[:2])
-            recs.append(
-                Recommendation(
-                    id="morning-window",
-                    kind="focus",
-                    title="Your morning window is still open",
-                    detail=f"Knock out {names} while it's early.",
-                    confidence=0.6,
-                    reason="These habits are set for the morning and aren't logged yet.",
-                )
-            )
-
-        # 5) Next best task.
-        if suggested is not None:
-            due_txt = f" (due {suggested.due_date.isoformat()})" if suggested.due_date else ""
-            recs.append(
-                Recommendation(
-                    id=f"task-{suggested.id}",
-                    kind="task",
-                    title=f"Next up: {suggested.title}",
-                    detail=f"Your highest-priority open task{due_txt}.",
-                    confidence=0.65,
-                    reason="Chosen by priority and due date among your open tasks.",
-                )
-            )
-
-        return recs[:5]

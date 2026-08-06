@@ -16,13 +16,14 @@ def test_dashboard_shape_and_streak(client):
     for key in (
         "greeting", "habits_today", "habits_completed", "habits_total",
         "weekly_consistency", "life_score", "life_score_trend", "focus_score",
-        "top_streaks", "recommendations", "tasks_today",
+        "top_streaks", "recommendations", "recommendations_model_backed", "tasks_today",
     ):
         assert key in body, f"missing dashboard key: {key}"
 
     assert body["habits_total"] == 1
     assert body["habits_completed"] == 1
     assert isinstance(body["recommendations"], list)
+    assert isinstance(body["recommendations_model_backed"], bool)
     assert isinstance(body["life_score_trend"], list)
 
 
