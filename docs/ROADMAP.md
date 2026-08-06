@@ -55,12 +55,12 @@ The core differentiator. Built as a `learning` service package over the historic
 - Natural-language global search ("What did I do last Friday?", "When was I happiest?")
 - Timeline view across all data types
 
-## Phase 7 — Platform & hardening  ⬜
-- Tauri desktop packaging (requires Rust + MSVC toolchain + WebView2)
-- Alembic-managed migrations as source of truth; PostgreSQL adapter
-- Encrypted backups, export (JSON/CSV/Markdown/PDF), optional cloud sync
-- Focus mode (Pomodoro/deep-work timer, distraction counter), accessibility, i18n
-- Background job scheduler for retraining + backups
+## Phase 7 — Platform & hardening  🟨
+- ✅ Tauri desktop packaging (Rust + MSVC toolchain + WebView2; builds & launches)
+- ✅ Alembic-managed migrations as source of truth (baseline `f8d0c28e722c`, dev DB stamped); ⬜ PostgreSQL adapter
+- ✅ Encrypted backups (AES-GCM/PBKDF2, client-side) + JSON export/restore; ⬜ CSV/Markdown/PDF export, optional cloud sync
+- ✅ Focus mode (Pomodoro/deep-work timer, distraction counter); ⬜ accessibility, i18n
+- ⬜ Background job scheduler for retraining + backups
 
 ---
 
