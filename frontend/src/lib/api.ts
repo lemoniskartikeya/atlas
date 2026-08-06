@@ -1,5 +1,7 @@
 import type {
   AnalyticsSummary,
+  BackupDoc,
+  BackupResult,
   CoachMessage,
   CoachResponse,
   CoachStatus,
@@ -103,6 +105,10 @@ export const api = {
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
+
+  exportBackup: () => http<BackupDoc>("/backup/export"),
+  importBackup: (doc: BackupDoc) =>
+    http<BackupResult>("/backup/import", { method: "POST", body: JSON.stringify(doc) }),
 
   focusStats: () => http<FocusStats>("/focus/stats"),
   focusRecent: (limit = 10) => http<FocusSession[]>(`/focus/sessions?limit=${limit}`),

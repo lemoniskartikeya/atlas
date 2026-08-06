@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_session
 from app.services.analytics_service import AnalyticsService
+from app.services.backup_service import BackupService
 from app.services.coach_service import CoachService
 from app.services.dashboard_service import DashboardService
 from app.services.focus_service import FocusService
@@ -75,3 +76,7 @@ def coach_service(session: Session = Depends(get_session)) -> CoachService:
 
 def focus_service(session: Session = Depends(get_session)) -> FocusService:
     return FocusService(session)
+
+
+def backup_service(session: Session = Depends(get_session)) -> BackupService:
+    return BackupService(session)

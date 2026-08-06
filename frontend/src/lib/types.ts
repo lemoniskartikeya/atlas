@@ -511,6 +511,18 @@ export interface FocusStats {
   best_day_minutes: number;
 }
 
+export interface BackupDoc {
+  atlas_backup: boolean;
+  version: number;
+  exported_at?: string;
+  data: Record<string, unknown[]>;
+}
+
+export interface BackupResult {
+  imported: Record<string, number>;
+  total: number;
+}
+
 export interface WeeklyReview {
   start: string;
   end: string;
