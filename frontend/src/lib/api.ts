@@ -14,6 +14,7 @@ import type {
   PlanResponse,
   PredictionReport,
   PredictionsResponse,
+  SearchResponse,
   SimulationRequest,
   SimulationResponse,
   Task,
@@ -96,6 +97,9 @@ export const api = {
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),
 
   review: (offset = 0) => http<WeeklyReview>(`/review?offset=${offset}`),
+
+  search: (q: string, limit = 8) =>
+    http<SearchResponse>(`/search?q=${encodeURIComponent(q)}&limit=${limit}`),
 
   timeline: (params: { limit?: number; offset?: number; kinds?: string } = {}) => {
     const q = new URLSearchParams();

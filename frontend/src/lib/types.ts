@@ -448,6 +448,24 @@ export interface TimelineResponse {
   has_more: boolean;
 }
 
+export interface SearchResult {
+  type: "habit" | "task" | "journal" | "note" | "log";
+  id: string;
+  title: string;
+  snippet?: string | null;
+  date?: string | null;
+  status?: string | null;
+  route?: string | null;
+  score: number;
+}
+
+export interface SearchResponse {
+  query: string;
+  interpretation: string;
+  total: number;
+  results: SearchResult[];
+}
+
 export interface WeeklyReview {
   start: string;
   end: string;

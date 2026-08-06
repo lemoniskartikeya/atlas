@@ -168,6 +168,15 @@ export function usePredictions() {
   return useQuery({ queryKey: ["predictions"], queryFn: api.predictions });
 }
 
+export function useSearch(q: string) {
+  return useQuery({
+    queryKey: ["search", q],
+    queryFn: () => api.search(q),
+    enabled: q.trim().length >= 2,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useTimeline(kinds?: string) {
   const limit = 40;
   return useInfiniteQuery({

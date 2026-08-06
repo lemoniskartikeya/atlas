@@ -13,6 +13,7 @@ from app.services.notification_service import NotificationService
 from app.services.planner_service import PlannerService
 from app.services.prediction_service import PredictionService
 from app.services.review_service import WeeklyReviewService
+from app.services.search_service import SearchService
 from app.services.simulation_service import SimulationService
 from app.services.task_service import TaskService
 from app.services.timeline_service import TimelineService
@@ -60,3 +61,7 @@ def review_service(session: Session = Depends(get_session)) -> WeeklyReviewServi
 
 def timeline_service(session: Session = Depends(get_session)) -> TimelineService:
     return TimelineService(session)
+
+
+def search_service(session: Session = Depends(get_session)) -> SearchService:
+    return SearchService(session)
