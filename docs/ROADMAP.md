@@ -63,7 +63,8 @@ The core differentiator. Built as a `learning` service package over the historic
   `90007f7de463`); ⬜ PostgreSQL adapter
 - ✅ Encrypted backups (AES-GCM/PBKDF2, client-side) + JSON export/restore; ⬜ CSV/Markdown/PDF export, optional cloud sync
 - ✅ Focus mode (Pomodoro/deep-work timer, distraction counter); ⬜ accessibility, i18n
-- ⬜ Background job scheduler for retraining + backups
+- ✅ **Background job scheduler** — in-process asyncio loop, schedule computed from
+  persisted run history, running automatic retraining + daily backups
 
 ## Phase 8 — Accounts, identity & polish  🟨
 - ✅ **Atlas accounts** — scrypt-hashed passwords, revocable opaque sessions,
@@ -80,6 +81,22 @@ The core differentiator. Built as a `learning` service package over the historic
   intents; API key managed in-app (Settings → AI Coach) and stored locally
 - ⬜ Multi-user data scoping (accounts are currently an identity/lock layer over a
   single local vault, not a per-user partition)
+
+## Phase 9 — Closing the learning loops  ✅
+Atlas could always *predict*. This phase is what makes it actually improve with use.
+
+- ✅ **Automatic retraining** — the model no longer waits for a manual CLI run.
+  Gated on new-evidence volume, so it refits when there's something to learn from.
+- ✅ **Notification back-off** — repeated dismissals of the same nudge silence it
+  for a growing cooldown; a single open resets it. Delivers the Phase 5 promise
+  ("back off when ignored") that was previously only half-built.
+- ✅ **Recommendation outcome tracking** — every suggestion shown is recorded and
+  resolved the next day against what actually happened; families that work for
+  this user rank higher. Atlas learns from its own advice.
+- ✅ **Model-quality history** — accuracy and corpus size per version, so a
+  retrain that *hurts* is visible rather than silent.
+- ✅ All four surfaced in Settings → Learning, so "how am I getting better" is
+  answerable from inside the app.
 
 ---
 

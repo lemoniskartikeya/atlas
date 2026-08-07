@@ -20,6 +20,7 @@ from app.schemas.task import TaskRead
 from app.services import ml_gateway, streaks
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
+from app.services.feedback_service import FeedbackService
 from app.services.recommender import Recommender
 from app.services.task_service import TaskService
 
@@ -123,8 +124,18 @@ class DashboardService:
         life_trend = self._life_trend(habits, today)
 
         predictions, reliability = ml_gateway.habit_predictions(self.session, today)
+
+        # The feedback loop rides on the dashboard rather than a background job
+        # so it keeps working whether or not the scheduler is enabled. Both
+        # calls are cheap and idempotent: resolution only touches finished days,
+        # and recording skips anything already logged for today.
+        feedback = FeedbackService(self.session)
+        feedback.resolve_due(today)
+
         recommendations = Recommender(
-            predictions=predictions, reliability=reliability
+            predictions=predictions,
+            reliability=reliability,
+            weights=feedback.weights(today),
         ).build(
             habits_today=habits_today,
             weekly_consistency=weekly_consistency,
@@ -132,6 +143,8 @@ class DashboardService:
             suggested=suggested_task,
             now_hour=now_hour,
         )
+        # Recorded after ranking, so what's stored is what was actually shown.
+        feedback.record_shown(recommendations, today)
 
         return DashboardResponse(
             date=today,

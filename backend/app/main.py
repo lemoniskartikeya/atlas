@@ -1,6 +1,7 @@
 """Atlas FastAPI application entrypoint."""
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,9 +15,12 @@ from app.api.v1 import (
     calendar,
     coach,
     dashboard,
+    feedback,
     focus,
     habits,
+    jobs,
     journal,
+    ml_history,
     notifications,
     planner,
     predictions,
@@ -44,7 +48,27 @@ async def lifespan(_: FastAPI):
     if settings.auto_create_tables:
         Base.metadata.create_all(bind=engine)
         log.info("startup.tables_ensured", extra={"database_url": settings.database_url})
-    yield
+
+    task = None
+    if settings.jobs_enabled:
+        from app.core.database import SessionLocal
+        from app.services.jobs import scheduler_loop
+
+        task = asyncio.create_task(scheduler_loop(SessionLocal))
+        log.info("startup.scheduler_started")
+
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            # Await the cancellation so the loop's `finally` blocks run and the
+            # session is closed before the process exits.
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            log.info("shutdown.scheduler_stopped")
 
 
 def create_app() -> FastAPI:
@@ -61,6 +85,9 @@ def create_app() -> FastAPI:
     for router in (
         auth.router,
         calendar.router,
+        jobs.router,
+        ml_history.router,
+        feedback.router,
         habits.router,
         tasks.router,
         journal.router,

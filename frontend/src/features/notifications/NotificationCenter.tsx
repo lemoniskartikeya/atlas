@@ -18,6 +18,7 @@ import {
   useNotifDismiss,
   useNotifReadAll,
   useNotifRead,
+  useNotifResume,
   useNotifications,
 } from "@/hooks/queries";
 import { AnchoredOverlay } from "@/components/ui/anchored-overlay";
@@ -152,8 +153,10 @@ export function NotificationCenter() {
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const items = data?.notifications ?? [];
+  const snoozed = data?.snoozed ?? [];
   const unread = data?.unread ?? 0;
   const alerts = useDesktopAlerts(items);
+  const resume = useNotifResume();
 
   // Dismissal (outside click, Escape) is handled by AnchoredOverlay's scrim.
 
@@ -235,6 +238,34 @@ export function NotificationCenter() {
                   onDismiss={(id) => dismiss.mutate(id)}
                 />
               ))
+            )}
+
+            {/* Backed-off nudges are shown rather than silently withheld — the
+                user should be able to see what Atlas stopped sending, and why. */}
+            {snoozed.length > 0 && (
+              <div className="mt-2 border-t border-border/10 pt-2">
+                <div className="px-1.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-ink-faint">
+                  Paused — you kept dismissing these
+                </div>
+                {snoozed.map((s) => (
+                  <div
+                    key={`${s.kind}:${s.target ?? ""}`}
+                    className="flex items-start gap-2 rounded-xl px-1.5 py-1.5"
+                  >
+                    <BellOff size={13} className="mt-0.5 shrink-0 text-ink-faint" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] text-ink-muted">{s.label}</div>
+                      <div className="text-[11px] text-ink-faint">{s.reason}</div>
+                    </div>
+                    <button
+                      onClick={() => resume.mutate({ kind: s.kind, target: s.target })}
+                      className="pressable shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium text-accent hover:bg-accent-soft"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </>

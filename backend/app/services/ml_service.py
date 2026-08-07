@@ -85,14 +85,26 @@ class MLService:
                 ),
             }
         result = train_model(X, y, features.FEATURE_NAMES, dates)
+        # Stamp the corpus size onto the saved metrics: the retrain job uses it
+        # to tell how much new evidence has arrived since, and the model-history
+        # chart uses it to show quality against data volume.
+        metrics = {**result.metrics, "n_rows": self._log_count(), "n_samples": n}
         meta = registry.save(
             result.model,
             result.feature_names,
             result.kept_indices,
-            result.metrics,
+            metrics,
             result.importances,
         )
-        return {"trained": True, "version": meta["version"], "metrics": result.metrics, "n_samples": n}
+        return {"trained": True, "version": meta["version"], "metrics": metrics, "n_samples": n}
+
+    def _log_count(self) -> int:
+        """Total habit-log rows — the corpus the next retrain is measured against."""
+        from sqlalchemy import func, select
+
+        from app.models.habit import HabitLog
+
+        return int(self.session.scalar(select(func.count()).select_from(HabitLog)) or 0)
 
     def predict_today(self, today: Optional[date] = None) -> dict:
         bundle = registry.latest_bundle()

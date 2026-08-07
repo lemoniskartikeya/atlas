@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     coach_model: str = "claude-opus-5"
 
+    # Background jobs (retraining, automatic backups). Runs in-process; set
+    # false to keep the API purely request-driven.
+    jobs_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

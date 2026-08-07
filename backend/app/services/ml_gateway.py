@@ -69,3 +69,27 @@ def simulate(session: Session, overrides: dict, today: Optional[date] = None) ->
         return MLService(session).simulate(overrides, today)
     except Exception:  # pragma: no cover - defensive
         return None
+
+
+def model_history() -> list[dict]:
+    """Every trained model version, oldest first — quality over time.
+
+    Reads the registry's JSON index directly instead of going through
+    ``app.learning.registry``, which imports joblib. That keeps training history
+    visible in builds where the ML stack isn't installed at all (the packaged
+    desktop sidecar excludes scikit-learn), so the user can still see what was
+    trained and when.
+    """
+    import json
+    from pathlib import Path
+
+    from app.core.config import get_settings
+
+    path = Path(get_settings().data_dir) / "models" / "registry.json"
+    if not path.exists():
+        return []
+    try:
+        index = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    return index if isinstance(index, list) else []

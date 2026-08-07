@@ -25,6 +25,12 @@ class Recommendation(BaseModel):
     detail: str
     confidence: float  # 0..1
     reason: str  # human-readable "why this was suggested"
+    #: The habit this nudge is about, when it names one. Lets the feedback loop
+    #: check next day whether following it actually happened.
+    habit_id: Optional[str] = None
+    #: True when this nudge's position reflects how well that style of nudge
+    #: has worked for this user before.
+    outcome_ranked: bool = False
 
 
 class HabitTodayItem(BaseModel):

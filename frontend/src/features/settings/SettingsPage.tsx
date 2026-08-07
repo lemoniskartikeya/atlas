@@ -10,6 +10,7 @@ import { todayISO } from "@/lib/utils";
 import type { BackupDoc, BackupResult } from "@/lib/types";
 import { CoachKeyCard } from "./CoachKeyCard";
 import { DesktopCard } from "./DesktopCard";
+import { LearningCard } from "./LearningCard";
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -130,6 +131,8 @@ export function SettingsPage() {
           <ThemeToggle />
         </CardBody>
       </Card>
+
+      <LearningCard />
 
       <DesktopCard />
 

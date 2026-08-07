@@ -29,6 +29,10 @@ import type {
   AuthResponse,
   AuthStatus,
   CalendarMonth,
+  EffectivenessResponse,
+  JobRunOut,
+  JobsResponse,
+  ModelHistory,
   CompletedTasks,
   RegisterBody,
   Task,
@@ -147,6 +151,16 @@ export const api = {
   notifDismiss: (id: string) =>
     http<void>("/notifications/dismiss", { method: "POST", body: JSON.stringify({ id }) }),
   notifReadAll: () => http<void>("/notifications/read-all", { method: "POST" }),
+  notifResume: (kind: string, target?: string | null) =>
+    http<void>("/notifications/resume", {
+      method: "POST",
+      body: JSON.stringify({ kind, target: target ?? null }),
+    }),
+
+  jobs: () => http<JobsResponse>("/jobs"),
+  runJob: (id: string) => http<JobRunOut>(`/jobs/${id}/run`, { method: "POST" }),
+  modelHistory: () => http<ModelHistory>("/ml/history"),
+  effectiveness: () => http<EffectivenessResponse>("/feedback/effectiveness"),
 
   simulate: (body: SimulationRequest) =>
     http<SimulationResponse>("/simulator", { method: "POST", body: JSON.stringify(body) }),

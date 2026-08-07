@@ -42,9 +42,13 @@ class Recommender:
         *,
         predictions: Optional[dict[str, dict]] = None,
         reliability: Optional[float] = None,
+        weights: Optional[dict[str, float]] = None,
     ) -> None:
         self.predictions = predictions
         self.reliability = reliability
+        # Per-family multipliers from the outcome-feedback loop; empty until
+        # enough recommendations have been shown and resolved.
+        self.weights = weights or {}
 
     @property
     def model_backed(self) -> bool:
@@ -82,6 +86,7 @@ class Recommender:
                     detail=f"~{p}% likely to complete. {action}{streak_bit}",
                     confidence=round(self.reliability or 0.7, 2),
                     reason=why,
+                    habit_id=item.id,
                 )
             )
             flagged.add(item.id)
@@ -102,6 +107,7 @@ class Recommender:
                         f"“{item.title}” has a {item.current_streak}-day run and isn't "
                         "logged yet today."
                     ),
+                    habit_id=item.id,
                 )
             )
             flagged.add(item.id)
@@ -167,7 +173,33 @@ class Recommender:
                 )
             )
 
-        return recs[:5]
+        return self._rank(recs)[:5]
+
+    # ------------------------------------------------------------------ ranking
+    def _rank(self, recs: list[Recommendation]) -> list[Recommendation]:
+        """Reorder by how well each *style* of nudge has actually worked.
+
+        The generator's own order encodes urgency, so that stays the primary
+        signal — a family's track record is applied as a bounded multiplier on
+        confidence, enough to promote a consistently effective nudge or demote
+        one the user reliably ignores, but never enough to invert the list.
+        Families without enough resolved evidence keep their position exactly.
+        """
+        if not self.weights:
+            return recs
+
+        from app.services.feedback_service import family_of
+
+        scored = []
+        for position, rec in enumerate(recs):
+            weight = self.weights.get(family_of(rec.id))
+            if weight is not None:
+                rec.outcome_ranked = True
+            # Original position is the tiebreaker, so an unweighted list is
+            # returned byte-identical to the generator's order.
+            scored.append((-(rec.confidence * (weight or 1.0)), position, rec))
+        scored.sort(key=lambda s: (s[0], s[1]))
+        return [rec for _score, _pos, rec in scored]
 
     def _riskiest(self, habits_today: list[HabitTodayItem]) -> list[HabitTodayItem]:
         """Not-yet-done due habits the model thinks are most likely to slip."""

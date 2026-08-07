@@ -102,6 +102,68 @@ export interface Task {
   updated_at: string;
 }
 
+/* ------------------------------------------------------------------- learning */
+
+export interface JobRunOut {
+  job_id: string;
+  started_at: string;
+  finished_at?: string | null;
+  status: "ok" | "skipped" | "error";
+  detail?: string | null;
+  duration_ms?: number | null;
+}
+
+export interface JobOut {
+  id: string;
+  label: string;
+  description: string;
+  interval_hours: number;
+  last_run?: JobRunOut | null;
+  next_due?: string | null;
+  due_now: boolean;
+}
+
+export interface JobsResponse {
+  enabled: boolean;
+  jobs: JobOut[];
+  recent: JobRunOut[];
+}
+
+export interface ModelVersion {
+  version: string;
+  trained_at?: string | null;
+  model_type?: string | null;
+  roc_auc?: number | null;
+  accuracy?: number | null;
+  n_samples?: number | null;
+  n_rows?: number | null;
+  n_test?: number | null;
+}
+
+export interface ModelHistory {
+  versions: ModelVersion[];
+  total: number;
+  latest_roc_auc?: number | null;
+  best_roc_auc?: number | null;
+  delta_vs_previous?: number | null;
+}
+
+export interface FamilyEffectiveness {
+  family: string;
+  label: string;
+  shown: number;
+  followed: number;
+  rate: number;
+  weight?: number | null;
+  influencing: boolean;
+}
+
+export interface EffectivenessResponse {
+  families: FamilyEffectiveness[];
+  total_resolved: number;
+  min_samples: number;
+}
+
 /* ------------------------------------------------------------------- calendar */
 
 export interface CalendarHabit {
@@ -475,10 +537,21 @@ export interface NotificationItem {
   read: boolean;
 }
 
+export interface SnoozedStream {
+  kind: string;
+  target?: string | null;
+  label: string;
+  dismissals: number;
+  until: string;
+  reason: string;
+}
+
 export interface NotificationsResponse {
   generated_at: string;
   unread: number;
   notifications: NotificationItem[];
+  /** Nudges Atlas has paused because they kept being dismissed. */
+  snoozed: SnoozedStream[];
 }
 
 export interface SimulationRequest {

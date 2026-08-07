@@ -276,6 +276,15 @@ export function useNotifDismiss() {
   });
 }
 
+export function useNotifResume() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { kind: string; target?: string | null }) =>
+      api.notifResume(v.kind, v.target),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
 export function useNotifReadAll() {
   const qc = useQueryClient();
   return useMutation({

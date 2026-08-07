@@ -4,7 +4,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import notification_service
-from app.schemas.notification import NotificationAction, NotificationsResponse
+from app.schemas.notification import (
+    NotificationAction,
+    NotificationsResponse,
+    ResumeRequest,
+)
 from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -30,4 +34,11 @@ def dismiss(payload: NotificationAction, svc: NotificationService = Depends(noti
 @router.post("/read-all", status_code=status.HTTP_204_NO_CONTENT)
 def mark_all_read(svc: NotificationService = Depends(notification_service)):
     svc.mark_all_read()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/resume", status_code=status.HTTP_204_NO_CONTENT)
+def resume(payload: ResumeRequest, svc: NotificationService = Depends(notification_service)):
+    """Un-snooze a nudge Atlas backed off from after repeated dismissals."""
+    svc.resume(payload.kind, payload.target)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
