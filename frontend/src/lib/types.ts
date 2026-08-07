@@ -102,6 +102,58 @@ export interface Task {
   updated_at: string;
 }
 
+/* ------------------------------------------------------------------- accounts */
+
+export interface AtlasUser {
+  id: string;
+  username: string;
+  email?: string | null;
+  display_name?: string | null;
+  last_login_at?: string | null;
+  created_at: string;
+}
+
+export interface PasswordPolicy {
+  min_length: number;
+  requires_number: boolean;
+  requires_special: boolean;
+  requires_letter: boolean;
+  description: string;
+}
+
+export interface AuthStatus {
+  has_accounts: boolean;
+  authenticated: boolean;
+  user?: AtlasUser | null;
+  policy: PasswordPolicy;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AtlasUser;
+}
+
+export interface RegisterBody {
+  username: string;
+  password: string;
+  email?: string | null;
+  display_name?: string | null;
+}
+
+export interface CompletionStats {
+  today: number;
+  this_week: number;
+  window: number;
+  all_time: number;
+  window_days: number;
+  per_day: { date: string; count: number }[];
+}
+
+export interface CompletedTasks {
+  stats: CompletionStats;
+  tasks: Task[];
+}
+
 export interface JournalEntry {
   id: string;
   date: string;
@@ -470,6 +522,15 @@ export interface CoachStatus {
   ai_available: boolean;
   provider?: string | null;
   model?: string | null;
+  sdk_installed: boolean;
+  has_key: boolean;
+  /** Masked hint only — the full key is never returned by the API. */
+  key_hint?: string | null;
+}
+
+export interface KeyTestResult {
+  ok: boolean;
+  detail: string;
 }
 
 export interface CoachMessage {

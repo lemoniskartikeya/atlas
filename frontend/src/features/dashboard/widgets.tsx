@@ -1,7 +1,8 @@
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Brain,
-  Check,
   Clock,
   Flame,
   HeartPulse,
@@ -21,8 +22,7 @@ import {
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Stat } from "@/components/ui/stat";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProgressRing } from "@/components/ui/progress-ring";
-import { Sparkline } from "@/components/charts/sparkline";
+import { CheckToggle } from "@/components/ui/check-toggle";
 import { ContributionHeatmap, HeatmapLegend } from "@/components/charts/heatmap";
 import { useCompleteTask, useHeatmap, useLogHabit, useUnlogHabit } from "@/hooks/queries";
 import { cn, parseDate, pct, relativeDay, todayISO } from "@/lib/utils";
@@ -47,7 +47,7 @@ const TOD: Record<TimeOfDay, { icon: LucideIcon; label: string }> = {
 };
 
 const PRIORITY_COLOR: Record<Priority, string> = {
-  critical: "#d0605e",
+  critical: "rgb(var(--danger))",
   high: "rgb(var(--warn))",
   medium: "rgb(var(--accent))",
   low: "rgb(var(--ink-faint))",
@@ -76,47 +76,8 @@ function isOverdue(due: string): boolean {
   return parseDate(due).getTime() < today.getTime();
 }
 
-/* ------------------------------------------------------------- hero stats */
-
-export function HeroStats({ d }: { d: Dashboard }) {
-  const leader = d.top_streaks[0];
-  return (
-    <Card className="p-5">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-        <div className="flex shrink-0 items-center gap-4">
-          <ProgressRing
-            value={d.life_score / 100}
-            primary={String(Math.round(d.life_score))}
-            caption="Life Score"
-          />
-        </div>
-        <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
-          <Stat label="Weekly" value={pct(d.weekly_consistency)} sub="consistency" />
-          <Stat
-            label="Focus"
-            value={d.focus_score != null ? Math.round(d.focus_score) : "—"}
-            sub="today"
-          />
-          <Stat label="Habits" value={`${d.habits_completed}/${d.habits_total}`} sub="done today" />
-          <Stat
-            label="Top streak"
-            value={leader ? `${leader.current_streak}d` : "0"}
-            sub={leader?.title ?? "—"}
-            accent
-          />
-        </div>
-      </div>
-      {d.life_score_trend.length > 1 && (
-        <div className="mt-5">
-          <div className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
-            Life score · last {d.life_score_trend.length} days
-          </div>
-          <Sparkline data={d.life_score_trend} formatY={(n) => String(Math.round(n))} />
-        </div>
-      )}
-    </Card>
-  );
-}
+/* The dashboard headline now lives in LifeScoreCard.tsx, which pairs the score
+   with the interactive trend chart. */
 
 /* --------------------------------------------------------- today's habits */
 
@@ -125,36 +86,37 @@ function HabitToggleRow({ item }: { item: HabitTodayItem }) {
   const unlog = useUnlogHabit();
   const busy = log.isPending || unlog.isPending;
 
+  // Reflect the click immediately so the tick animates on the user's action
+  // rather than waiting on the round-trip; the refetch reconciles it.
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const done = optimistic ?? item.done_today;
+
   const toggle = () => {
-    if (item.done_today) unlog.mutate({ id: item.id, date: todayISO() });
-    else log.mutate({ id: item.id, body: { status: "completed" } });
+    if (item.done_today) {
+      setOptimistic(false);
+      unlog.mutate({ id: item.id, date: todayISO() }, { onSettled: () => setOptimistic(null) });
+    } else {
+      setOptimistic(true);
+      log.mutate(
+        { id: item.id, body: { status: "completed" } },
+        { onSettled: () => setOptimistic(null) },
+      );
+    }
   };
 
   return (
     <div className="flex items-center gap-3 py-1.5">
-      <button
-        onClick={toggle}
-        disabled={busy}
-        aria-label={item.done_today ? "Mark not done" : "Mark done"}
-        className={cn(
-          "grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-all",
-          item.done_today
-            ? "border-accent bg-accent text-white"
-            : "border-ink/25 text-transparent hover:border-accent hover:text-accent/40",
-        )}
-      >
-        <Check size={14} />
-      </button>
+      <CheckToggle checked={done} onChange={toggle} disabled={busy} size={24} />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-sm",
-          item.done_today ? "text-ink-faint line-through" : "text-ink",
+          "relative min-w-0 flex-1 truncate text-sm transition-colors",
+          done ? "text-ink-faint" : "text-ink",
         )}
       >
-        {item.title}
+        <span className={cn("relative", done && "strike-sweep")}>{item.title}</span>
       </span>
       {item.current_streak > 0 && (
-        <span className="flex items-center gap-1 text-[12px] text-ink-muted tabular-nums">
+        <span className="flex items-center gap-1 text-[12px] text-ink-muted tnum">
           <Flame size={12} className="text-accent" />
           {item.current_streak}
         </span>
@@ -196,45 +158,53 @@ export function TodayHabitsCard({
 
 function TaskRow({ task }: { task: Task }) {
   const complete = useCompleteTask();
-  const done = task.status === "done";
+  const [optimistic, setOptimistic] = useState(false);
+  const done = optimistic || task.status === "done";
+
   return (
-    <div className="flex items-center gap-3 py-1.5">
-      <button
-        onClick={() => !done && complete.mutate(task.id)}
+    // Completing a task shouldn't feel like deletion: the tick draws, the title
+    // strikes through, and only then does the row lift, blur, and collapse out
+    // of the list. AnimatePresence in the parent keeps it mounted to do that.
+    <motion.div
+      layout
+      initial={false}
+      exit={{ opacity: 0, height: 0, marginTop: 0, x: 14, filter: "blur(3px)" }}
+      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center gap-3 overflow-hidden py-1.5"
+    >
+      <CheckToggle
+        checked={done}
         disabled={done || complete.isPending}
-        aria-label="Complete task"
-        className={cn(
-          "grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors",
-          done
-            ? "border-accent bg-accent text-white"
-            : "border-ink/25 text-transparent hover:border-accent",
-        )}
-      >
-        <Check size={12} />
-      </button>
+        onChange={() => {
+          if (done) return;
+          setOptimistic(true);
+          complete.mutate(task.id);
+        }}
+        label="Complete task"
+      />
       <span
         className="h-1.5 w-1.5 shrink-0 rounded-full"
         style={{ backgroundColor: PRIORITY_COLOR[task.priority] }}
       />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-sm",
-          done ? "text-ink-faint line-through" : "text-ink",
+          "min-w-0 flex-1 truncate text-sm transition-colors",
+          done ? "text-ink-faint" : "text-ink",
         )}
       >
-        {task.title}
+        <span className={cn("relative", done && "strike-sweep")}>{task.title}</span>
       </span>
       {task.due_date && (
         <span
           className={cn(
-            "shrink-0 text-[11px] tabular-nums",
-            isOverdue(task.due_date) ? "text-red-500" : "text-ink-faint",
+            "shrink-0 text-[11px] tnum",
+            isOverdue(task.due_date) ? "text-danger" : "text-ink-faint",
           )}
         >
           {relativeDay(task.due_date)}
         </span>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -265,11 +235,15 @@ export function TasksTodayCard({
           </div>
         )}
         <div className="divide-y divide-border/10">
-          {tasks.length === 0 ? (
-            <p className="py-2 text-sm text-ink-muted">No tasks scheduled for today.</p>
-          ) : (
-            tasks.map((t) => <TaskRow key={t.id} task={t} />)
-          )}
+          <AnimatePresence initial={false} mode="popLayout">
+            {tasks.length === 0 ? (
+              <p key="empty" className="py-2 text-sm text-ink-muted">
+                No tasks scheduled for today.
+              </p>
+            ) : (
+              tasks.map((t) => <TaskRow key={t.id} task={t} />)
+            )}
+          </AnimatePresence>
         </div>
       </CardBody>
     </Card>

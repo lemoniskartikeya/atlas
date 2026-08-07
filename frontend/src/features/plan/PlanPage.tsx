@@ -190,7 +190,7 @@ export function PlanPage() {
     <div className="animate-fade-in space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-ink">Today's plan</h2>
+          <h2 className="text-xl font-display font-semibold text-ink">Today's plan</h2>
           <p className="text-sm text-ink-muted">{formatLongDate(plan.date)}</p>
         </div>
         <span

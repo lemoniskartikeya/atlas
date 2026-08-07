@@ -158,7 +158,7 @@ export function FocusPage() {
   return (
     <div className="animate-fade-in space-y-4">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Focus</h2>
+        <h2 className="text-xl font-display font-semibold text-ink">Focus</h2>
         <p className="text-sm text-ink-muted">Protect a block of deep work. Log it when you're done.</p>
       </div>
 

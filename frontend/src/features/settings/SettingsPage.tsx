@@ -8,6 +8,8 @@ import { api } from "@/lib/api";
 import { decryptBackup, downloadText, encryptBackup, isEncryptedBackup } from "@/lib/backup";
 import { todayISO } from "@/lib/utils";
 import type { BackupDoc, BackupResult } from "@/lib/types";
+import { CoachKeyCard } from "./CoachKeyCard";
+import { DesktopCard } from "./DesktopCard";
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -112,7 +114,7 @@ export function SettingsPage() {
   return (
     <div className="animate-fade-in mx-auto max-w-2xl space-y-4">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Settings</h2>
+        <h2 className="text-xl font-display font-semibold text-ink">Settings</h2>
         <p className="text-sm text-ink-muted">Appearance and your data.</p>
       </div>
 
@@ -128,6 +130,10 @@ export function SettingsPage() {
           <ThemeToggle />
         </CardBody>
       </Card>
+
+      <DesktopCard />
+
+      <CoachKeyCard />
 
       <Card>
         <CardHeader>
@@ -205,11 +211,8 @@ export function SettingsPage() {
           )}
 
           {staged && (
-            <div
-              className="space-y-2 rounded-xl p-3"
-              style={{ backgroundColor: "rgb(208 96 94 / 0.08)" }}
-            >
-              <div className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "#d0605e" }}>
+            <div className="bg-danger-soft space-y-2 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 text-[13px] font-medium text-danger">
                 <AlertTriangle size={14} /> Replace all data with this backup?
               </div>
               <p className="text-[12px] text-ink-muted">
@@ -220,8 +223,7 @@ export function SettingsPage() {
                 <button
                   onClick={confirmImport}
                   disabled={busy}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                  style={{ backgroundColor: "#d0605e" }}
+                  className="pressable rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   {busy ? "Restoring…" : "Replace everything"}
                 </button>
@@ -241,7 +243,7 @@ export function SettingsPage() {
       </Card>
 
       {msg && <p className="px-1 text-sm text-success">{msg}</p>}
-      {err && <p className="px-1 text-sm text-red-500">{err}</p>}
+      {err && <p className="px-1 text-sm text-danger">{err}</p>}
 
       <p className="px-1 text-[11px] leading-relaxed text-ink-faint">
         Backups are handled on your device. When you encrypt, the passphrase never leaves your

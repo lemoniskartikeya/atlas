@@ -46,6 +46,32 @@ export function todayISO(): string {
   ).padStart(2, "0")}`;
 }
 
+/** Short axis label, e.g. "12 Aug". */
+export function shortDate(d: Date): string {
+  return `${d.getDate()} ${MONTH[d.getMonth()]}`;
+}
+
+/** Weekday + short date, e.g. "Wed 12 Aug". */
+export function weekdayShortDate(d: Date): string {
+  return `${WEEKDAY[d.getDay()]} ${d.getDate()} ${MONTH[d.getMonth()]}`;
+}
+
+/**
+ * Label a trailing daily series that ends today, oldest first.
+ * Backend trend arrays carry values only, so the dates are reconstructed here.
+ */
+export function trailingDayLabels(count: number, format = weekdayShortDate): string[] {
+  const out: string[] = [];
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(base);
+    d.setDate(base.getDate() - i);
+    out.push(format(d));
+  }
+  return out;
+}
+
 export function initials(text: string): string {
   return text
     .split(/\s+/)

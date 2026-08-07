@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.models  # noqa: F401  -- ensure every table is registered on Base.metadata
 from app.api.v1 import (
     analytics,
+    auth,
     backup,
     coach,
     dashboard,
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     )
 
     for router in (
+        auth.router,
         habits.router,
         tasks.router,
         journal.router,

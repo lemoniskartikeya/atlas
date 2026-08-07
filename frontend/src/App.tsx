@@ -12,10 +12,24 @@ import { TasksPage } from "@/features/tasks/TasksPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { TimelinePage } from "@/features/timeline/TimelinePage";
+import { useAuth } from "@/features/auth/AuthContext";
+import { LoginScreen } from "@/features/auth/LoginScreen";
+
+/** Blocks the app behind the account gate until the stored session resolves. */
+function AppGate({ children }: { children: React.ReactNode }) {
+  const { user, ready } = useAuth();
+
+  // Render nothing (not a spinner) for the sub-second token check — a flash of
+  // loading chrome before a login form reads as jank.
+  if (!ready) return <div className="app-aurora min-h-screen" />;
+  if (!user) return <LoginScreen />;
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
-    <AppShell>
+    <AppGate>
+      <AppShell>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/plan" element={<PlanPage />} />
@@ -42,6 +56,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </AppShell>
+      </AppShell>
+    </AppGate>
   );
 }

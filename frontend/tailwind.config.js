@@ -18,20 +18,23 @@ export default {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           soft: "rgb(var(--accent) / 0.14)",
         },
-        success: "rgb(var(--success) / <alpha-value>)",
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          soft: "rgb(var(--success) / 0.14)",
+        },
         warn: "rgb(var(--warn) / <alpha-value>)",
+        danger: {
+          DEFAULT: "rgb(var(--danger) / <alpha-value>)",
+          soft: "rgb(var(--danger) / 0.12)",
+        },
       },
       borderRadius: { xl: "1rem", "2xl": "1.25rem", "3xl": "1.75rem" },
-      boxShadow: {
-        glass:
-          "0 1px 1px rgb(0 0 0 / 0.04), 0 10px 30px -14px rgb(0 0 0 / 0.22)",
-        "glass-lg":
-          "0 1px 1px rgb(0 0 0 / 0.05), 0 28px 56px -22px rgb(0 0 0 / 0.34)",
-      },
       fontFamily: {
+        // UI chrome — whatever the OS considers its interface face.
         sans: [
           "-apple-system",
           "BlinkMacSystemFont",
+          '"Segoe UI Variable Text"',
           '"Segoe UI"',
           "Inter",
           "Roboto",
@@ -39,14 +42,22 @@ export default {
           "Arial",
           "sans-serif",
         ],
+        // Display/editorial type. System serifs only — the app ships offline,
+        // so no webfont may be fetched at runtime.
+        display: [
+          '"Iowan Old Style"',
+          '"Palatino Linotype"',
+          "Palatino",
+          '"Book Antiqua"',
+          "Georgia",
+          '"Times New Roman"',
+          "serif",
+        ],
       },
-      keyframes: {
-        "fade-in": {
-          from: { opacity: "0", transform: "translateY(6px)" },
-          to: { opacity: "1", transform: "none" },
-        },
+      transitionTimingFunction: {
+        "out-soft": "cubic-bezier(0.22, 1, 0.36, 1)",
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
-      animation: { "fade-in": "fade-in 0.35s cubic-bezier(0.22,1,0.36,1) both" },
     },
   },
   plugins: [],

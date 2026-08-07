@@ -45,6 +45,13 @@ export function useTasks(scope: "all" | "today" | "upcoming" | "open" = "all") {
   return useQuery({ queryKey: keys.tasks(scope), queryFn: () => api.tasks(scope) });
 }
 
+export function useCompletedTasks(days = 30, limit = 200) {
+  return useQuery({
+    queryKey: ["tasks", "completed", days, limit],
+    queryFn: () => api.completedTasks(days, limit),
+  });
+}
+
 /** Habit logging touches streaks, the dashboard, and the heatmap — refresh all three. */
 function useRefreshEverything() {
   const qc = useQueryClient();

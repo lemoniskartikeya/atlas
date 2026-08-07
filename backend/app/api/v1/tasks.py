@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.deps import task_service
 from app.models.task import Task
-from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
+from app.schemas.task import CompletedTasks, TaskCreate, TaskRead, TaskUpdate
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -29,6 +29,17 @@ def list_tasks(
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def create_task(payload: TaskCreate, svc: TaskService = Depends(task_service)):
     return svc.create(payload)
+
+
+@router.get("/completed", response_model=CompletedTasks)
+def completed_tasks(
+    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(200, ge=1, le=500),
+    svc: TaskService = Depends(task_service),
+):
+    """Completion history. Declared before /{task_id} so the literal path wins."""
+    tasks, stats = svc.completed_history(days=days, limit=limit)
+    return {"stats": stats, "tasks": tasks}
 
 
 @router.get("/{task_id}", response_model=TaskRead)

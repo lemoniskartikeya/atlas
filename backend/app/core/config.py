@@ -5,20 +5,48 @@ Values can be overridden with environment variables prefixed ``ATLAS_`` (e.g.
 """
 from __future__ import annotations
 
+import os
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# backend/  (config.py -> core -> app -> backend)
-BASE_DIR = Path(__file__).resolve().parents[2]
+# True when running from a PyInstaller bundle (the packaged desktop sidecar).
+FROZEN = getattr(sys, "frozen", False)
+
+
+def _user_data_dir() -> Path:
+    """Per-user, writable, and persistent across app updates."""
+    if sys.platform == "win32":
+        root = Path(os.environ.get("APPDATA") or Path.home() / "AppData/Roaming")
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library/Application Support"
+    else:
+        root = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    return root / "Atlas"
+
+
+# Where the app keeps its own files (database, .env, trained models).
+#
+# Source checkout: backend/  (config.py -> core -> app -> backend).
+# Frozen bundle: a per-user data directory. PyInstaller unpacks the bundle to a
+# temp folder that is deleted on exit, so anything written next to the
+# executable — the database included — would silently vanish between launches.
+BASE_DIR = _user_data_dir() if FROZEN else Path(__file__).resolve().parents[2]
+
+if FROZEN:
+    BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="ATLAS_",
-        env_file=".env",
+        # Absolute, not "./.env": the packaged desktop build spawns this backend
+        # with an arbitrary working directory, and a relative path would silently
+        # resolve to nothing there.
+        env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )

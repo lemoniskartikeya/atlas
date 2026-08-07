@@ -23,6 +23,7 @@ import {
 } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 import type { NotificationItem } from "@/lib/types";
+import { isDesktop, notify, requestNotificationPermission } from "@/lib/desktop";
 
 const KIND_ICON: Record<string, LucideIcon> = {
   brief: Sunrise,
@@ -39,9 +40,16 @@ const PRIORITY_COLOR: Record<NotificationItem["priority"], string> = {
   low: "rgb(var(--ink-faint))",
 };
 
-/** Optional desktop alerts for new high-priority notifications (opt-in). */
+/**
+ * Optional desktop alerts for new high-priority notifications (opt-in).
+ *
+ * On the desktop build these are real OS notifications, so they arrive even
+ * when Atlas is parked in the tray. In a browser it's the Web Notifications
+ * API — `notify()` picks the right one.
+ */
 function useDesktopAlerts(items: NotificationItem[]) {
-  const supported = typeof window !== "undefined" && "Notification" in window;
+  const supported =
+    isDesktop() || (typeof window !== "undefined" && "Notification" in window);
   const [enabled, setEnabled] = useState(
     () => supported && localStorage.getItem("atlas-desktop-alerts") === "on",
   );
@@ -54,15 +62,11 @@ function useDesktopAlerts(items: NotificationItem[]) {
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled || !supported || Notification.permission !== "granted") return;
+    if (!enabled || !supported) return;
     for (const n of items) {
       if (n.read || n.priority !== "high" || seen.current.has(n.id)) continue;
       seen.current.add(n.id);
-      try {
-        new Notification(n.title, { body: n.body });
-      } catch {
-        /* some browsers throw if not in a user gesture — ignore */
-      }
+      void notify(n.title, n.body);
     }
     items.forEach((n) => seen.current.add(n.id));
   }, [items, enabled, supported]);
@@ -74,11 +78,7 @@ function useDesktopAlerts(items: NotificationItem[]) {
       localStorage.setItem("atlas-desktop-alerts", "off");
       return;
     }
-    const perm =
-      Notification.permission === "granted"
-        ? "granted"
-        : await Notification.requestPermission();
-    if (perm === "granted") {
+    if (await requestNotificationPermission()) {
       items.forEach((n) => seen.current.add(n.id));
       setEnabled(true);
       localStorage.setItem("atlas-desktop-alerts", "on");

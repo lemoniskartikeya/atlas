@@ -177,7 +177,7 @@ export function JournalPage() {
     <div className="animate-fade-in space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-ink">Journal</h2>
+          <h2 className="text-xl font-display font-semibold text-ink">Journal</h2>
           <p className="text-sm text-ink-muted">A page for every day.</p>
         </div>
         <div className="flex items-center gap-2">

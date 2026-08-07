@@ -27,6 +27,14 @@ frontend/stats.html
 .env.*
 !.env.example
 
+# ---- Desktop build artifacts ----
+# The PyInstaller sidecar is a ~25 MB binary rebuilt from source by
+# backend/scripts/build_sidecar.py — never commit it.
+backend/dist-sidecar/
+backend/build-sidecar/
+frontend/src-tauri/binaries/
+frontend/src-tauri/target/
+
 # ---- Data / backups (user-owned, never commit) ----
 data/
 backups/

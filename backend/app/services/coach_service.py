@@ -21,6 +21,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.secrets_store import mask
 from app.schemas.coach import CoachMessage
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
@@ -30,6 +31,23 @@ from app.services.review_service import WeeklyReviewService
 _MAX_TOKENS = 2000
 
 
+def _friendly_api_error(exc: Exception) -> str:
+    """Turn SDK exceptions into something a Settings panel can show."""
+    name = type(exc).__name__
+    text = str(exc)
+    if "authentication" in name.lower() or "401" in text or "invalid x-api-key" in text.lower():
+        return "That key was rejected by Anthropic. Check you copied it in full."
+    if "permission" in name.lower() or "403" in text:
+        return "That key isn't permitted to use this model."
+    if "notfound" in name.lower().replace("_", "") or "404" in text:
+        return "Model not found for this key."
+    if "ratelimit" in name.lower().replace("_", "") or "429" in text:
+        return "Rate limited — the key works, try again in a moment."
+    if "connection" in name.lower() or "timeout" in name.lower():
+        return "Couldn't reach Anthropic. Check your internet connection."
+    return f"{name}: {text[:160]}"
+
+
 class CoachService:
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -37,23 +55,52 @@ class CoachService:
 
     # -------------------------------------------------------------------- status
     def status(self) -> dict:
-        ready = self._ai_ready()
         settings = get_settings()
+        ready = self._ai_ready()
         return {
             "ai_available": ready,
             "provider": "anthropic" if ready else None,
             "model": settings.coach_model if ready else None,
+            "sdk_installed": self._sdk_installed(),
+            "has_key": bool(settings.anthropic_api_key),
+            "key_hint": mask(settings.anthropic_api_key),
         }
 
     @staticmethod
-    def _ai_ready() -> bool:
-        if not get_settings().anthropic_api_key:
-            return False
+    def _sdk_installed() -> bool:
         try:
             import anthropic  # noqa: F401
         except Exception:
             return False
         return True
+
+    @classmethod
+    def _ai_ready(cls) -> bool:
+        return bool(get_settings().anthropic_api_key) and cls._sdk_installed()
+
+    def test_key(self) -> dict:
+        """Round-trip the smallest possible request so Settings can show a real
+        verdict instead of "saved" and a coach that silently stays local."""
+        settings = get_settings()
+        if not settings.anthropic_api_key:
+            return {"ok": False, "detail": "No API key saved."}
+        if not self._sdk_installed():
+            return {
+                "ok": False,
+                "detail": "The `anthropic` package isn't installed. Run: pip install -r requirements-ai.txt",
+            }
+        try:
+            import anthropic
+
+            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            client.messages.create(
+                model=settings.coach_model,
+                max_tokens=1,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            return {"ok": True, "detail": f"Connected to {settings.coach_model}."}
+        except Exception as exc:  # network / auth / bad model
+            return {"ok": False, "detail": _friendly_api_error(exc)}
 
     # ----------------------------------------------------------------------- ask
     def ask(
@@ -129,18 +176,25 @@ class CoachService:
 
     def _system_prompt(self, ctx: dict) -> str:
         return (
-            "You are Atlas Coach, a warm, sharp habit and productivity coach built into "
-            "the user's personal tracking app. You have their live data below.\n\n"
+            "You are Atlas Coach, a warm, sharp assistant built into the user's personal "
+            "habit and productivity app. Their live Atlas data is below.\n\n"
+            "You are a general-purpose assistant first and a coach second. Answer whatever "
+            "the user actually asks — general knowledge, writing, code, explanations, "
+            "brainstorming, or open-ended conversation — exactly as a capable assistant "
+            "would. Do NOT deflect a general question back to their habits, and do not "
+            "force their tracking data into an answer where it isn't relevant.\n\n"
+            "When the question IS about them — their habits, streaks, tasks, mood, sleep, "
+            "progress, or what to do next — ground the answer in the real numbers below.\n\n"
             "Guidelines:\n"
-            "- Be concise and specific. Cite the user's real numbers (streaks, rates, mood, "
-            "sleep) and never invent data.\n"
-            "- Offer at most two or three concrete, doable suggestions, each with a one-line "
-            "reason.\n"
+            "- Be concise and specific. Never invent Atlas data: if a number isn't below, "
+            "say you don't have it.\n"
+            "- For coaching answers, offer at most two or three concrete suggestions, each "
+            "with a one-line reason.\n"
             "- Be encouraging but honest: celebrate wins, name slips plainly.\n"
-            "- You are not a doctor or therapist. For health or mental-health concerns, gently "
-            "suggest a professional; do not diagnose.\n"
+            "- You are not a doctor or therapist. For health or mental-health concerns, "
+            "gently suggest a professional; do not diagnose.\n"
             "- Plain text only: no markdown headers and no internal or system XML tags.\n\n"
-            f"USER DATA (as of {ctx['today'].isoformat()}):\n{self._digest_text(ctx)}"
+            f"USER'S ATLAS DATA (as of {ctx['today'].isoformat()}):\n{self._digest_text(ctx)}"
         )
 
     def _digest_text(self, ctx: dict) -> str:
@@ -201,9 +255,18 @@ class CoachService:
             return self._tasks(ctx)
         if any(w in q for w in ("how am i", "doing", "going", "progress", "status", "overall")):
             return self._snapshot(ctx)
+
+        # Anything else is a general question. Answering it needs a real model —
+        # so say that plainly instead of replying with an unrelated stats dump,
+        # which is what makes an offline assistant feel broken.
         return (
-            self._snapshot(ctx)
-            + " You can ask me what to focus on, about a specific habit, your streaks, or your wellbeing."
+            "I can't answer that one offline — the local coach only knows your Atlas data, "
+            "so it handles questions about your habits, streaks, tasks, focus, wellbeing, "
+            "and weekly review.\n\n"
+            "To ask me anything else, add an Anthropic API key in Settings → AI Coach. "
+            "That switches the coach to Claude, which answers general questions too and "
+            "still sees your Atlas numbers.\n\n"
+            + self._snapshot(ctx)
         )
 
     def _snapshot(self, ctx: dict) -> str:

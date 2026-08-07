@@ -88,7 +88,7 @@ export function CoachPage() {
     <div className="animate-fade-in flex h-[calc(100vh-8rem)] flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-ink">Coach</h2>
+          <h2 className="text-xl font-display font-semibold text-ink">Coach</h2>
           <p className="text-sm text-ink-muted">Grounded in your data. Ask anything.</p>
         </div>
         {aiAvailable ? (

@@ -2,37 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Atlas — "warm editorial" design system.
+   Paper-like warm neutrals, terracotta accent, sage for anything positive.
+   Serif for display type, sans for UI chrome. Colour is reserved for meaning.
+   ========================================================================== */
+
 /* ------------------------------------------------------------------ tokens */
 :root {
-  --canvas: 243 244 246;
+  --canvas: 251 248 244; /* #FBF8F4 warm paper */
   --surface: 255 255 255;
   --panel: 255 255 255;
-  --border: 15 23 42;
-  --ink: 22 27 34;
-  --ink-muted: 92 101 114;
-  --ink-faint: 141 149 161;
-  --accent: 74 108 170;
-  --success: 74 132 100;
-  --warn: 176 130 70;
-  --glass-alpha: 0.72;
-  --glass-border: 0.55;
+  --border: 43 38 34;
+  --ink: 43 38 34; /* #2B2622 warm near-black */
+  --ink-muted: 107 98 89;
+  --ink-faint: 156 146 137;
+  --accent: 194 112 61; /* #C2703D terracotta */
+  --success: 110 143 99; /* #6E8F63 sage */
+  --warn: 192 138 62;
+  --danger: 180 84 74;
+
+  /* glass material */
+  --glass-alpha: 0.62; /* panel translucency — low enough that blur reads */
+  --glass-rim: 255 255 255; /* frosted edge catching the light */
+  --glass-border: 0.75;
+  --glass-hi: 0.8; /* inner top highlight */
+
+  /* Height of the custom window titlebar. Zero in a browser; the desktop shell
+     sets data-desktop on <html> and the sticky offsets follow this token. */
+  --chrome-h: 0px;
+
+  /* motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+
   color-scheme: light;
 }
 
 .dark {
-  --canvas: 11 13 17;
-  --surface: 22 26 32;
-  --panel: 32 37 46;
-  --border: 255 255 255;
-  --ink: 231 234 239;
-  --ink-muted: 156 164 176;
-  --ink-faint: 108 116 129;
-  --accent: 139 168 224;
-  --success: 122 178 146;
-  --warn: 209 168 110;
+  --canvas: 20 17 14; /* #14110E warm espresso */
+  --surface: 28 24 21;
+  --panel: 34 29 24; /* #221D18 */
+  --border: 237 230 222;
+  --ink: 237 230 222; /* #EDE6DE warm bone */
+  --ink-muted: 169 158 146;
+  --ink-faint: 119 109 99;
+  --accent: 224 139 84; /* lifted terracotta so it survives the dark ground */
+  --success: 143 177 131;
+  --warn: 217 168 94;
+  --danger: 212 119 107;
+
   --glass-alpha: 0.5;
-  --glass-border: 0.09;
+  --glass-rim: 255 246 236; /* warm rim, never clinical white */
+  --glass-border: 0.1;
+  --glass-hi: 0.06;
+
   color-scheme: dark;
+}
+
+html[data-desktop] {
+  --chrome-h: 2rem;
 }
 
 /* Subtle default separators; explicit border-* utilities override this. */
@@ -51,38 +83,118 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Display type: serif, tight, generous. Used for page + hero headings only —  */
+/* UI chrome (labels, buttons, table headers) stays sans so it reads as chrome. */
+.font-display {
+  font-family: theme("fontFamily.display");
+  letter-spacing: -0.015em;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* Numerals in stats: serif looks wrong at small sizes, so keep them sans but  */
+/* tabular so they don't jitter as values animate.                            */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
 /* -------------------------------------------------------- ambient backdrop */
-/* Soft, blurred color fields sitting behind the frosted-glass panels.        */
+/* Warm blurred colour fields — the thing you see *through* the frosted panels. */
+/* Deliberately muted: this is paper with light on it, not a neon dashboard.    */
 .app-aurora::before {
   content: "";
   position: fixed;
-  inset: -25% -10% auto -10%;
-  height: 75vh;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(38% 52% at 16% 18%, rgb(var(--accent) / 0.2), transparent 70%),
-    radial-gradient(36% 48% at 84% 10%, rgb(120 150 205 / 0.16), transparent 70%),
-    radial-gradient(46% 60% at 58% 88%, rgb(150 160 176 / 0.12), transparent 72%);
-  filter: blur(34px) saturate(118%);
+    radial-gradient(44% 48% at 12% 14%, rgb(194 112 61 / 0.16), transparent 68%),
+    radial-gradient(40% 44% at 88% 12%, rgb(214 172 110 / 0.14), transparent 66%),
+    radial-gradient(46% 52% at 82% 86%, rgb(190 124 116 / 0.11), transparent 70%),
+    radial-gradient(52% 56% at 20% 90%, rgb(110 143 99 / 0.12), transparent 72%);
+  filter: blur(52px) saturate(112%);
+  animation: aurora-drift 34s ease-in-out infinite;
+}
+
+.dark .app-aurora::before {
+  background:
+    radial-gradient(46% 50% at 10% 12%, rgb(224 139 84 / 0.2), transparent 66%),
+    radial-gradient(42% 46% at 90% 10%, rgb(214 172 110 / 0.15), transparent 64%),
+    radial-gradient(48% 54% at 84% 88%, rgb(196 118 108 / 0.13), transparent 68%),
+    radial-gradient(54% 58% at 18% 92%, rgb(122 156 110 / 0.13), transparent 70%);
+}
+
+/* Fine grain — sells "paper" over "flat gradient". */
+.app-aurora::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .app-aurora::after {
+  opacity: 0.055;
+  mix-blend-mode: soft-light;
+}
+
+@keyframes aurora-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2%, 1.5%, 0) scale(1.05);
+  }
 }
 
 /* --------------------------------------------------------------- glass */
+/* Frosted material: translucent panel + real blur + a bright rim and inner   */
+/* top highlight (light catching the bevel), over a layered warm shadow.      */
 .glass {
+  position: relative;
   background: rgb(var(--panel) / var(--glass-alpha));
-  -webkit-backdrop-filter: blur(22px) saturate(165%);
-  backdrop-filter: blur(22px) saturate(165%);
-  border: 1px solid rgb(var(--border) / var(--glass-border));
-  box-shadow: theme("boxShadow.glass");
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgb(var(--glass-rim) / var(--glass-border));
+  box-shadow:
+    0 1px 1px rgb(58 42 28 / 0.04),
+    0 16px 38px -20px rgb(58 42 28 / 0.26),
+    inset 0 1px 0 rgb(var(--glass-rim) / var(--glass-hi));
 }
 
 .dark .glass {
-  box-shadow: theme("boxShadow.glass-lg");
+  border-color: rgb(var(--glass-rim) / var(--glass-border));
+  box-shadow:
+    0 1px 1px rgb(0 0 0 / 0.22),
+    0 28px 56px -24px rgb(0 0 0 / 0.55),
+    inset 0 1px 0 rgb(var(--glass-rim) / var(--glass-hi));
 }
 
 .glass-inset {
-  background: rgb(var(--panel) / calc(var(--glass-alpha) * 0.45));
-  border: 1px solid rgb(var(--border) / calc(var(--glass-border) * 0.65));
+  background: rgb(var(--panel) / calc(var(--glass-alpha) * 0.5));
+  border: 1px solid rgb(var(--glass-rim) / calc(var(--glass-border) * 0.5));
+  box-shadow: inset 0 1px 0 rgb(var(--glass-rim) / calc(var(--glass-hi) * 0.5));
+}
+.dark .glass-inset {
+  background: rgb(255 246 236 / 0.035);
+  border-color: rgb(255 246 236 / 0.06);
+}
+
+/* Sticky header scrim: content dissolves into blur as it scrolls under the    */
+/* title, instead of sliding behind bare text. Masked so the edge never shows. */
+.topbar-scrim::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 0 0;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+  background: linear-gradient(to bottom, rgb(var(--canvas) / 0.66), rgb(var(--canvas) / 0));
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent);
+  mask-image: linear-gradient(to bottom, #000 58%, transparent);
 }
 
 .hairline {
@@ -90,6 +202,146 @@ body {
 }
 .dark .hairline {
   border-color: rgb(var(--border) / 0.08);
+}
+
+/* --------------------------------------------------------------- motion */
+/* A small, consistent vocabulary. Everything interactive picks from here so  */
+/* the app moves like one object instead of a pile of ad-hoc transitions.     */
+
+/* Pressable: subtle scale-down on press with a spring back out. */
+.pressable {
+  transition:
+    transform var(--dur-fast) var(--ease-out-soft),
+    background-color var(--dur-fast) var(--ease-out-soft),
+    border-color var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft);
+}
+.pressable:active {
+  transform: scale(0.965);
+  transition-duration: 60ms;
+}
+
+/* Cards lift very slightly toward the cursor. */
+.lift {
+  transition:
+    transform var(--dur-base) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft);
+}
+.lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Entrance: content settles in rather than popping. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: rise-in var(--dur-slow) var(--ease-out-soft) both;
+}
+
+/* Staggered children — set --i on each child. */
+.stagger > * {
+  animation: rise-in var(--dur-slow) var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* Checkbox tick draws itself on. */
+@keyframes draw-check {
+  from {
+    stroke-dashoffset: 22;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.draw-check path,
+.draw-check polyline {
+  stroke-dasharray: 22;
+  animation: draw-check 340ms var(--ease-out-soft) forwards;
+}
+
+/* A ring pulses outward when something is completed. */
+@keyframes complete-ping {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+.complete-ping::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(var(--success));
+  animation: complete-ping 620ms var(--ease-out-soft) forwards;
+  pointer-events: none;
+}
+
+/* Strikethrough sweeps across instead of appearing. */
+@keyframes strike-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.strike-sweep::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left center;
+  animation: strike-sweep 300ms var(--ease-out-soft) forwards;
+}
+
+/* Shimmer for skeletons — a light pass, not a blunt opacity pulse. */
+@keyframes shimmer {
+  to {
+    background-position-x: -200%;
+  }
+}
+.shimmer {
+  background: linear-gradient(
+    100deg,
+    rgb(var(--ink) / 0.05) 40%,
+    rgb(var(--ink) / 0.09) 50%,
+    rgb(var(--ink) / 0.05) 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-aurora::before {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .pressable:active,
+  .lift:hover {
+    transform: none;
+  }
 }
 
 /* --------------------------------------------------------- scrollbars */
@@ -116,4 +368,14 @@ body {
 
 button {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Native desktop chrome: regions the OS treats as the titlebar. */
+.drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }

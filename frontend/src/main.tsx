@@ -5,7 +5,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "./App";
 import { ThemeProvider } from "./hooks/useTheme";
+import { AuthProvider } from "./features/auth/AuthContext";
+import { isDesktop } from "./lib/desktop";
+import { BackendGate } from "./components/common/BackendGate";
 import "./index.css";
+
+// Marks the document so CSS can reserve room for the custom titlebar. Set
+// before first paint so the layout never shifts once the shell mounts.
+if (isDesktop()) document.documentElement.dataset.desktop = "";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,9 +24,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        {/* Auth mounts only once the backend answers — otherwise its very first
+            request races the sidecar's startup and always loses. */}
+        <BackendGate>
+          <AuthProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </AuthProvider>
+        </BackendGate>
       </QueryClientProvider>
     </ThemeProvider>
   </React.StrictMode>,

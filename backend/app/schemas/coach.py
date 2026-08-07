@@ -10,6 +10,18 @@ class CoachStatus(BaseModel):
     ai_available: bool  # a key is configured AND the anthropic package is installed
     provider: Optional[str] = None  # "anthropic" when AI is available
     model: Optional[str] = None
+    sdk_installed: bool = False
+    has_key: bool = False
+    key_hint: Optional[str] = None  # masked, e.g. "sk-ant-api0…wxyz"
+
+
+class ApiKeyRequest(BaseModel):
+    api_key: str = Field(min_length=8, max_length=400)
+
+
+class KeyTestResult(BaseModel):
+    ok: bool
+    detail: str
 
 
 class CoachMessage(BaseModel):

@@ -6,8 +6,10 @@ from app.models.journal import JournalEntry
 from app.models.notification import NotificationState
 from app.models.note import Note
 from app.models.task import Project, Task
+from app.models.user import AuthSession, User
 
 __all__ = [
+    "AuthSession",
     "Base",
     "FocusSession",
     "Habit",
@@ -17,4 +19,5 @@ __all__ = [
     "Note",
     "Project",
     "Task",
+    "User",
 ]

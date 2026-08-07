@@ -1,7 +1,7 @@
 """Task domain service."""
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Sequence
 
 from sqlalchemy.orm import Session
@@ -72,6 +72,49 @@ class TaskService:
     def delete(self, task: Task) -> None:
         self.tasks.delete(task)
         self.tasks.commit()
+
+    # -------------------------------------------------------------- completions
+    def completed_history(
+        self, days: int = 30, limit: int = 200, today: Optional[date] = None
+    ) -> tuple[list[Task], dict]:
+        """Finished tasks plus a rollup of how much got done.
+
+        Returns every completion inside the window (newest first) and counts for
+        today / this week / the window / all time, with a per-day series so the
+        UI can chart throughput.
+        """
+        today = today or date.today()
+        rows = list(self.tasks.completed(limit=max(limit, 500)))
+
+        def day_of(task: Task) -> date:
+            # completed_at may come back naive from SQLite; treat it as UTC and
+            # read it in local terms so "today" agrees with the rest of the app.
+            ts = task.completed_at
+            if ts is None:
+                return today
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            return ts.astimezone().date()
+
+        window_start = today - timedelta(days=days - 1)
+        week_start = today - timedelta(days=today.weekday())
+
+        in_window = [t for t in rows if day_of(t) >= window_start]
+        per_day = {window_start + timedelta(days=i): 0 for i in range(days)}
+        for t in in_window:
+            per_day[day_of(t)] = per_day.get(day_of(t), 0) + 1
+
+        stats = {
+            "today": sum(1 for t in rows if day_of(t) == today),
+            "this_week": sum(1 for t in rows if day_of(t) >= week_start),
+            "window": len(in_window),
+            "all_time": len(rows),
+            "window_days": days,
+            "per_day": [
+                {"date": d.isoformat(), "count": c} for d, c in sorted(per_day.items())
+            ],
+        }
+        return in_window[:limit], stats
 
     def suggested_next(self, today: Optional[date] = None) -> Optional[Task]:
         today = today or date.today()

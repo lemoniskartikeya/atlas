@@ -1,13 +1,14 @@
+import { type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "@/hooks/queries";
+import { useAuth } from "@/features/auth/AuthContext";
 import { formatLongDate } from "@/lib/utils";
 import {
   HeatmapCard,
-  HeroStats,
   RecommendationsCard,
   StreaksCard,
   TasksTodayCard,
@@ -15,6 +16,16 @@ import {
   WellbeingCard,
 } from "./widgets";
 import { ForecastCard } from "./ForecastCard";
+import { LifeScoreCard } from "./LifeScoreCard";
+
+/** One band of the page. Bands enter in sequence rather than all at once. */
+function Section({ i, children }: { i: number; children: ReactNode }) {
+  return (
+    <div className="stagger" style={{ ["--i" as string]: i }}>
+      {children}
+    </div>
+  );
+}
 
 function HeroHeader({
   greeting,
@@ -25,10 +36,18 @@ function HeroHeader({
   date: string;
   onQuickAdd: () => void;
 }) {
+  const { user } = useAuth();
+  // The backend greeting is time-of-day only ("Good evening"); the account
+  // supplies the name, so the two are composed here rather than server-side.
+  const name = user?.display_name?.trim() || user?.username;
+
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 pt-1">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-ink">{greeting}</h2>
+        <h2 className="text-[28px] font-display font-semibold leading-tight text-ink">
+          {greeting}
+          {name && <span className="text-accent">, {name}</span>}
+        </h2>
         <p className="text-sm text-ink-muted">{formatLongDate(date)}</p>
       </div>
       <Button variant="outline" onClick={onQuickAdd}>
@@ -40,20 +59,20 @@ function HeroHeader({
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-56" />
-      <Skeleton className="h-44 rounded-2xl" />
+    <div className="space-y-5">
+      <Skeleton className="h-12 w-64" />
+      <Skeleton className="h-72 rounded-2xl" />
+      <Skeleton className="h-36 rounded-2xl" />
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="space-y-4 lg:col-span-7">
           <Skeleton className="h-56 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-44 rounded-2xl" />
         </div>
         <div className="space-y-4 lg:col-span-5">
-          <Skeleton className="h-64 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-52 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
         </div>
       </div>
-      <Skeleton className="h-40 rounded-2xl" />
     </div>
   );
 }
@@ -61,14 +80,11 @@ function DashboardSkeleton() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <Card className="mx-auto mt-10 max-w-md p-8 text-center">
-      <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-red-500/10 text-red-500">
+      <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-danger-soft text-danger">
         <AlertTriangle size={22} />
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-ink">Couldn't reach Atlas</h3>
+      <h3 className="mt-4 font-display text-lg font-semibold text-ink">Couldn't reach Atlas</h3>
       <p className="mt-1 text-sm text-ink-muted">{message}</p>
-      <p className="mt-2 text-[12px] text-ink-faint">
-        Is the backend running on <code>http://127.0.0.1:8000</code>?
-      </p>
       <Button className="mt-4" variant="outline" onClick={onRetry}>
         Retry
       </Button>
@@ -76,6 +92,14 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+/**
+ * Dashboard reading order, top to bottom:
+ *   how am I doing → how consistent have I been → what's on today → what's next
+ *
+ * The year heatmap sits directly under the headline rather than buried at the
+ * bottom: it's the answer to "am I actually keeping this up", which belongs
+ * next to the score it explains, not below three columns of detail.
+ */
 export function DashboardPage() {
   const navigate = useNavigate();
   const { data: d, isLoading, isError, error, refetch } = useDashboard();
@@ -90,35 +114,53 @@ export function DashboardPage() {
     );
 
   return (
-    <div className="animate-fade-in space-y-4">
-      <HeroHeader greeting={d.greeting} date={d.date} onQuickAdd={() => navigate("/habits?new=1")} />
-      <HeroStats d={d} />
+    <div className="space-y-5">
+      <Section i={0}>
+        <HeroHeader
+          greeting={d.greeting}
+          date={d.date}
+          onQuickAdd={() => navigate("/habits?new=1")}
+        />
+      </Section>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="space-y-4 lg:col-span-7">
-          <TodayHabitsCard
-            items={d.habits_today}
-            completed={d.habits_completed}
-            total={d.habits_total}
-          />
-          <TasksTodayCard
-            tasks={d.tasks_today}
-            suggested={d.suggested_task ?? null}
-            openCount={d.tasks_open}
-          />
+      <Section i={1}>
+        <LifeScoreCard d={d} />
+      </Section>
+
+      <Section i={2}>
+        <HeatmapCard />
+      </Section>
+
+      <Section i={3}>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="space-y-4 lg:col-span-7">
+            <TodayHabitsCard
+              items={d.habits_today}
+              completed={d.habits_completed}
+              total={d.habits_total}
+            />
+            <TasksTodayCard
+              tasks={d.tasks_today}
+              suggested={d.suggested_task ?? null}
+              openCount={d.tasks_open}
+            />
+          </div>
+          <div className="space-y-4 lg:col-span-5">
+            <ForecastCard />
+            <RecommendationsCard
+              recs={d.recommendations}
+              modelBacked={d.recommendations_model_backed}
+            />
+          </div>
         </div>
-        <div className="space-y-4 lg:col-span-5">
-          <ForecastCard />
-          <RecommendationsCard
-            recs={d.recommendations}
-            modelBacked={d.recommendations_model_backed}
-          />
+      </Section>
+
+      <Section i={4}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <WellbeingCard mood={d.mood} energy={d.energy} sleep={d.sleep_hours} />
           <StreaksCard streaks={d.top_streaks} />
         </div>
-      </div>
-
-      <HeatmapCard />
+      </Section>
     </div>
   );
 }

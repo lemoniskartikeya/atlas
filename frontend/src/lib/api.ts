@@ -5,6 +5,7 @@ import type {
   CoachMessage,
   CoachResponse,
   CoachStatus,
+  KeyTestResult,
   CorrelationsResponse,
   Dashboard,
   FocusSession,
@@ -25,6 +26,10 @@ import type {
   SearchResponse,
   SimulationRequest,
   SimulationResponse,
+  AuthResponse,
+  AuthStatus,
+  CompletedTasks,
+  RegisterBody,
   Task,
   TimelineResponse,
   WeeklyReview,
@@ -35,19 +40,37 @@ import type {
 // Same-origin by default; the Vite dev server proxies /api -> backend.
 const BASE = (import.meta.env.VITE_API_BASE ?? "") + "/api/v1";
 
+const TOKEN_KEY = "atlas-session-token";
+
+/** Session token lives in localStorage so a relaunch stays signed in. */
+export const session = {
+  get: () => localStorage.getItem(TOKEN_KEY),
+  set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
+  clear: () => localStorage.removeItem(TOKEN_KEY),
+};
+
+/** Thrown for 401s so callers can distinguish "signed out" from a real failure. */
+export class UnauthorizedError extends Error {}
+
 async function http<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = session.get();
   const res = await fetch(BASE + path, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail ?? detail;
+      detail = typeof body.detail === "string" ? body.detail : detail;
     } catch {
       /* non-JSON error body */
     }
+    if (res.status === 401) throw new UnauthorizedError(detail);
     throw new Error(`${res.status} ${detail}`);
   }
   if (res.status === 204) return undefined as T;
@@ -55,6 +78,24 @@ async function http<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  /** Liveness probe — used to gate the UI while the backend boots. */
+  health: () => http<{ status: string }>("/health"),
+
+  authStatus: () => http<AuthStatus>("/auth/status"),
+  register: (body: RegisterBody) =>
+    http<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
+  login: (identifier: string, password: string) =>
+    http<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ identifier, password }),
+    }),
+  logout: () => http<void>("/auth/logout", { method: "POST" }),
+  changePassword: (current_password: string, new_password: string) =>
+    http<void>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password, new_password }),
+    }),
+
   dashboard: () => http<Dashboard>("/dashboard"),
 
   habits: (includeArchived = false) =>
@@ -79,6 +120,8 @@ export const api = {
   updateTask: (id: string, body: Partial<Task>) =>
     http<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   completeTask: (id: string) => http<Task>(`/tasks/${id}/complete`, { method: "POST" }),
+  completedTasks: (days = 30, limit = 200) =>
+    http<CompletedTasks>(`/tasks/completed?days=${days}&limit=${limit}`),
   deleteTask: (id: string) => http<void>(`/tasks/${id}`, { method: "DELETE" }),
 
   heatmap: (days = 365) => http<Heatmap>(`/analytics/heatmap?days=${days}`),
@@ -116,6 +159,10 @@ export const api = {
     http<FocusSession>("/focus/sessions", { method: "POST", body: JSON.stringify(body) }),
 
   coachStatus: () => http<CoachStatus>("/coach/status"),
+  setCoachKey: (api_key: string) =>
+    http<CoachStatus>("/coach/key", { method: "PUT", body: JSON.stringify({ api_key }) }),
+  clearCoachKey: () => http<CoachStatus>("/coach/key", { method: "DELETE" }),
+  testCoachKey: () => http<KeyTestResult>("/coach/key/test", { method: "POST" }),
   coachAsk: (messages: CoachMessage[], useAi: boolean) =>
     http<CoachResponse>("/coach/ask", {
       method: "POST",

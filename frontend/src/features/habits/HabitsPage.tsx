@@ -74,7 +74,7 @@ function HabitCard({ habit }: { habit: Habit }) {
             if (window.confirm(`Delete “${habit.title}”? This removes its history.`))
               del.mutate(habit.id);
           }}
-          className="text-ink-faint opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+          className="text-ink-faint opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
           aria-label="Delete habit"
         >
           <Trash2 size={15} />
@@ -135,7 +135,7 @@ export function HabitsPage() {
     <div className="animate-fade-in space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-ink">Your habits</h2>
+          <h2 className="text-xl font-display font-semibold text-ink">Your habits</h2>
           <p className="text-sm text-ink-muted">{habits ? `${habits.length} active` : "Loading…"}</p>
         </div>
         <Button onClick={() => setOpen(true)}>

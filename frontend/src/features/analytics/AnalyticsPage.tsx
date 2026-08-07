@@ -81,7 +81,7 @@ export function AnalyticsPage() {
   return (
     <div className="animate-fade-in space-y-4">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Analytics</h2>
+        <h2 className="text-xl font-display font-semibold text-ink">Analytics</h2>
         <p className="text-sm text-ink-muted">Patterns across your history.</p>
       </div>
 

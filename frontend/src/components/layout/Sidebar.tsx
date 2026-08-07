@@ -25,13 +25,13 @@ function Item({ to, label, icon: Icon, end }: NavItemDef) {
 
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 z-20 h-screen w-[68px] shrink-0 lg:w-60">
-      <div className="glass m-2 flex h-[calc(100vh-1rem)] flex-col rounded-3xl p-3">
+    <aside className="sticky top-[var(--chrome-h)] z-20 h-[calc(100vh-var(--chrome-h))] w-[68px] shrink-0 lg:w-60">
+      <div className="glass m-2 flex h-[calc(100vh-var(--chrome-h)-1rem)] flex-col rounded-3xl p-3">
         <div className="mb-4 flex items-center gap-2.5 px-2 py-1">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent text-white shadow-sm">
             <Orbit size={18} />
           </div>
-          <span className="hidden text-[15px] font-semibold tracking-tight text-ink lg:block">
+          <span className="hidden text-[15px] font-display font-semibold text-ink lg:block">
             Atlas
           </span>
         </div>

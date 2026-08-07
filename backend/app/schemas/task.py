@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import Priority, TaskStatus
 
+_Date = date
+
 
 class TaskBase(BaseModel):
     title: str = Field(min_length=1, max_length=300)
@@ -60,3 +62,26 @@ class TaskRead(TaskBase):
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+
+
+class CompletionDay(BaseModel):
+    # `date: date` self-shadows during deferred-annotation resolution — the same
+    # trap that silently broke HabitLogCreate.date. Alias the type to dodge it.
+    date: _Date
+    count: int
+
+
+class CompletionStats(BaseModel):
+    today: int
+    this_week: int
+    window: int
+    all_time: int
+    window_days: int
+    per_day: list[CompletionDay]
+
+
+class CompletedTasks(BaseModel):
+    """Completion history: what got finished, and how much."""
+
+    stats: CompletionStats
+    tasks: list[TaskRead]

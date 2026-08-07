@@ -56,11 +56,30 @@ The core differentiator. Built as a `learning` service package over the historic
 - Timeline view across all data types
 
 ## Phase 7 — Platform & hardening  🟨
-- ✅ Tauri desktop packaging (Rust + MSVC toolchain + WebView2; builds & launches)
-- ✅ Alembic-managed migrations as source of truth (baseline `f8d0c28e722c`, dev DB stamped); ⬜ PostgreSQL adapter
+- ✅ **Real desktop app** — PyInstaller sidecar backend, MSI/NSIS installers, custom
+  titlebar, window-state persistence, system tray, global hotkey, native
+  notifications, launch-at-login (see `docs/DESKTOP.md`)
+- ✅ Alembic-managed migrations as source of truth (baseline `f8d0c28e722c`, accounts
+  `90007f7de463`); ⬜ PostgreSQL adapter
 - ✅ Encrypted backups (AES-GCM/PBKDF2, client-side) + JSON export/restore; ⬜ CSV/Markdown/PDF export, optional cloud sync
 - ✅ Focus mode (Pomodoro/deep-work timer, distraction counter); ⬜ accessibility, i18n
 - ⬜ Background job scheduler for retraining + backups
+
+## Phase 8 — Accounts, identity & polish  🟨
+- ✅ **Atlas accounts** — scrypt-hashed passwords, revocable opaque sessions,
+  register/login/logout/change-password, first-run setup, username on the dashboard.
+  Password policy: ≥8 chars with a letter, a number, and a special character.
+- ✅ **Warm editorial design system** — new palette, serif display type, reworked
+  glass material, and a shared motion vocabulary (press, lift, stagger, draw-on
+  ticks, completion ring)
+- ✅ **Interactive life-score chart** — hover anywhere across the plot, compact
+  tooltip, continuous day-in-context insights
+- ✅ **Completion history** — `GET /tasks/completed`, throughput chart, archive
+  grouped by day; completing a task plays an exit animation instead of vanishing
+- ✅ **Conversational AI Coach** — answers general questions, not just Atlas
+  intents; API key managed in-app (Settings → AI Coach) and stored locally
+- ⬜ Multi-user data scoping (accounts are currently an identity/lock layer over a
+  single local vault, not a per-user partition)
 
 ---
 

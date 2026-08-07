@@ -120,7 +120,7 @@ export function TimelinePage() {
   return (
     <div className="animate-fade-in space-y-4">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Timeline</h2>
+        <h2 className="text-xl font-display font-semibold text-ink">Timeline</h2>
         <p className="text-sm text-ink-muted">Everything you've done, in order.</p>
       </div>
 
