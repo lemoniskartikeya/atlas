@@ -79,16 +79,39 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 /* ------------------------------------------------------------------ autostart */
 
+/** Windows reports a missing registry value as "cannot find the file". */
+function isMissingEntryError(err: unknown): boolean {
+  return /cannot find the file|not found|NotFound|os error 2\b/i.test(String(err));
+}
+
 export const autostart = {
   isEnabled: async (): Promise<boolean> => {
     if (!isDesktop()) return false;
     const { isEnabled } = await import("@tauri-apps/plugin-autostart");
     return isEnabled();
   },
+
+  /**
+   * Register or unregister launch-at-login.
+   *
+   * Turning it *off* is made idempotent on purpose: the underlying crate
+   * deletes a registry value outright, which throws when the value isn't there.
+   * Since the UI can be out of sync with the registry (Windows lets the user
+   * disable a startup entry from Task Manager behind the app's back), a
+   * "disable something already disabled" call is a normal thing to happen and
+   * shouldn't surface as an error.
+   */
   set: async (on: boolean): Promise<void> => {
     if (!isDesktop()) return;
     const { enable, disable } = await import("@tauri-apps/plugin-autostart");
-    if (on) await enable();
-    else await disable();
+    if (on) {
+      await enable();
+      return;
+    }
+    try {
+      await disable();
+    } catch (err) {
+      if (!isMissingEntryError(err)) throw err;
+    }
   },
 };

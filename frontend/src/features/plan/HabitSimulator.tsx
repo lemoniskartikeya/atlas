@@ -25,7 +25,7 @@ const TODS: { value: TimeOfDay | ""; label: string }[] = [
 
 function deltaColor(delta: number): string {
   if (delta > 0.005) return "rgb(var(--success))";
-  if (delta < -0.005) return "#d0605e";
+  if (delta < -0.005) return "rgb(var(--danger))";
   return "rgb(var(--ink-faint))";
 }
 
@@ -216,6 +216,19 @@ export function HabitSimulator() {
               <Button onClick={() => train.mutate()} disabled={train.isPending}>
                 <Brain size={15} /> {train.isPending ? "Training…" : "Train model"}
               </Button>
+              {/* A dead button with no explanation is worse than no button.
+                  Training needs enough settled history, and in a build without
+                  the ML extras the endpoint isn't mounted at all. */}
+              {train.isError && (
+                <p className="bg-danger-soft max-w-xs rounded-xl px-3 py-2 text-[12px] text-danger">
+                  {String((train.error as Error)?.message ?? "").includes("404")
+                    ? "This build doesn't include the ML layer, so the model can't be trained here."
+                    : String((train.error as Error)?.message ?? "Training failed.")}
+                </p>
+              )}
+              {train.isSuccess && train.data && !train.data.trained && (
+                <p className="max-w-xs text-[12px] text-ink-faint">{train.data.reason}</p>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

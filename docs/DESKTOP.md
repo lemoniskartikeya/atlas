@@ -51,7 +51,7 @@ warning and carries on against the backend you started by hand.
 ## Build the installers
 
 ```
-# 1) compile the backend into the sidecar binary (~25 MB)
+# 1) compile the backend into the sidecar binary (~75 MB, includes the ML stack)
 cd backend && ./.venv/Scripts/python scripts/build_sidecar.py
 
 # 2) build the app + installers
@@ -102,10 +102,41 @@ and confirming port 8000 is released.
 
 ## The ML layer in packaged builds
 
-`atlas-backend.spec` excludes scikit-learn, numpy, scipy, and friends to keep
-the bundle small. The packaged backend logs `ml.router_unavailable` and every
-ML-backed surface falls back to its heuristic path — by design. Remove those
-entries from `excludes` if you want a bundle with the ML layer baked in.
+The ML stack (scikit-learn, numpy, scipy, joblib) **is bundled**. It was
+originally excluded to keep the installer small, but that shipped a desktop app
+where the what-if simulator, the forecast card, and model-driven
+recommendations could never work — `/ml/*` was not even mounted, so the UI
+offered a "Train model" button that 404'd. The ML layer is the product's
+differentiator; a ~75 MB sidecar (up from ~25 MB) is the right trade.
+
+`pandas`, `matplotlib`, `IPython`, `pytest`, and `tkinter` remain excluded —
+nothing imports them.
+
+## Logs
+
+Release builds log to the app's log directory, not just debug builds:
+
+    %LOCALAPPDATA%\app.atlas.desktop\logs\Atlas.log
+
+It captures the shell's own events (tray, hotkey, autostart state, sidecar
+lifecycle) and mirrors the backend's stdout. A desktop app that fails quietly
+on someone else's machine is otherwise undiagnosable.
+
+## Launch at login
+
+Handled by `tauri-plugin-autostart`, which writes `HKCU\...\CurrentVersion\Run`
+on Windows. Two sharp edges worth knowing, both handled in `lib/desktop.ts` and
+`DesktopCard.tsx`:
+
+- `disable()` deletes the registry value outright and **throws when it isn't
+  there**, so disabling something already disabled raises. That call is now
+  idempotent.
+- `is_enabled()` returns `run_key_present && task_manager_not_disabled`.
+  Windows keeps a separate "Startup Apps" override next to the Run key, and its
+  write is best-effort inside the crate. So `enable()` can succeed while
+  `is_enabled()` still reports false — indistinguishable from a silent no-op.
+  The toggle now reads the state back after writing and, on a mismatch, points
+  at Task Manager → Startup apps instead of failing quietly.
 
 ## Files
 

@@ -170,12 +170,29 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            // Logging is on in release too, to a file in the app's log dir.
+            // A desktop app that fails quietly on someone else's machine is
+            // undiagnosable otherwise — which is exactly how the launch-at-login
+            // toggle managed to do nothing without ever saying why.
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .targets([
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                            file_name: Some("atlas".into()),
+                        }),
+                    ])
+                    .build(),
+            )?;
+
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_autostart::ManagerExt;
+                match app.autolaunch().is_enabled() {
+                    Ok(on) => log::info!("autostart: registered = {on}"),
+                    Err(err) => log::warn!("autostart: unavailable ({err})"),
+                }
             }
 
             spawn_backend(app.handle());

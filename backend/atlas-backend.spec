@@ -17,6 +17,11 @@ hiddenimports = [
     # Alembic ships the migration environment; keeping it importable means the
     # packaged backend can upgrade its own schema on first launch.
     *collect_submodules("alembic"),
+    # scikit-learn resolves several internals at runtime that static analysis
+    # misses, and the app itself only ever imports it lazily.
+    *collect_submodules("sklearn"),
+    "joblib",
+    "scipy.special._cdflib",
 ]
 
 a = Analysis(
@@ -32,9 +37,12 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    # Heavy optional stacks stay out: the ML layer is installed separately and
-    # would multiply the bundle size for a feature most launches never touch.
-    excludes=["sklearn", "scipy", "numpy", "pandas", "joblib", "matplotlib", "tkinter"],
+    # The ML stack IS bundled. It was excluded to keep the download small, but
+    # that shipped a desktop app where the what-if simulator, the forecast card
+    # and model-driven recommendations could never work — /ml/* wasn't even
+    # mounted, so the UI offered a "Train model" button that 404'd. The ML layer
+    # is the product's differentiator; a bigger installer is the right trade.
+    excludes=["pandas", "matplotlib", "tkinter", "IPython", "pytest"],
     noarchive=False,
 )
 
