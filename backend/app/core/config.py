@@ -39,6 +39,11 @@ BASE_DIR = _user_data_dir() if FROZEN else Path(__file__).resolve().parents[2]
 if FROZEN:
     BASE_DIR.mkdir(parents=True, exist_ok=True)
 
+# Where *read-only* bundled resources live (alembic.ini, the migration scripts).
+# These ship inside the executable and are unpacked to a temp dir, so they are
+# emphatically NOT under BASE_DIR once frozen.
+RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -59,8 +64,10 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{(BASE_DIR / 'atlas.db').as_posix()}"
     db_echo: bool = False
 
-    # In dev we ensure tables exist on startup (create_all). Alembic becomes the
-    # source of truth for schema evolution in a later phase.
+    # Run Alembic migrations on startup. This is how a packaged install picks up
+    # schema changes; create_all can add tables but never columns.
+    run_migrations: bool = True
+    # Fallback used only when migrations are off (tests, throwaway databases).
     auto_create_tables: bool = True
 
     cors_origins: list[str] = [

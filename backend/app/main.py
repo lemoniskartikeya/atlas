@@ -33,6 +33,7 @@ from app.api.v1 import (
 from app.core.config import get_settings
 from app.core.database import engine
 from app.core.logging import configure_logging, get_logger
+from app.core.schema import ensure_schema
 from app.models.base import Base
 
 settings = get_settings()
@@ -44,10 +45,15 @@ API_PREFIX = "/api/v1"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Dev convenience: ensure tables exist. Alembic becomes source of truth later.
-    if settings.auto_create_tables:
+    # Alembic is the schema source of truth, and it runs here rather than only
+    # on a developer's machine — a packaged install has no other way to pick up
+    # a column added in a later version.
+    if settings.run_migrations:
+        ensure_schema(engine)
+    elif settings.auto_create_tables:
+        # Escape hatch for tests and throwaway databases.
         Base.metadata.create_all(bind=engine)
-        log.info("startup.tables_ensured", extra={"database_url": settings.database_url})
+    log.info("startup.schema_ready", extra={"database_url": settings.database_url})
 
     task = None
     if settings.jobs_enabled:

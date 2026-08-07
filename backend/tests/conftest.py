@@ -7,6 +7,11 @@ import tempfile
 # Point the app at throwaway settings *before* importing anything that reads them.
 os.environ["ATLAS_DATABASE_URL"] = "sqlite:///./test_atlas_ignored.db"
 os.environ["ATLAS_AUTO_CREATE_TABLES"] = "false"
+# Tests build their schema straight from the models on a throwaway in-memory
+# engine; running Alembic here would migrate the file above instead.
+os.environ["ATLAS_RUN_MIGRATIONS"] = "false"
+# The background scheduler would run jobs against the real data dir mid-test.
+os.environ["ATLAS_JOBS_ENABLED"] = "false"
 # Keep trained model artifacts out of the real data dir during tests.
 os.environ.setdefault("ATLAS_DATA_DIR", tempfile.mkdtemp(prefix="atlas_test_models_"))
 
