@@ -45,3 +45,40 @@ def test_focus_appears_in_timeline(client):
     assert events
     assert events[0]["kind"] == "focus"
     assert "40 min" in events[0]["title"]
+
+
+# --------------------------------------------------- timezone regression tests
+# Sessions are stored as UTC, but "today" everywhere else in the app means the
+# *local* date. Reading them back in UTC put every session logged after 18:30
+# IST on the previous day, so the focus stats silently reset to zero for the
+# rest of the evening.
+
+def test_local_day_treats_naive_timestamps_as_utc():
+    """SQLite returns naive datetimes; they must not be read as local time."""
+    from datetime import datetime, timezone
+
+    from app.services.focus_service import _local_day
+
+    naive = datetime(2026, 8, 7, 19, 15)
+    aware = naive.replace(tzinfo=timezone.utc)
+    assert _local_day(naive) == _local_day(aware)
+
+
+def test_local_day_resolves_in_local_time_not_utc():
+    from datetime import datetime, timedelta, timezone
+
+    from app.services.focus_service import _local_day
+
+    ts = datetime(2026, 8, 7, 19, 15, tzinfo=timezone.utc)
+    assert _local_day(ts) == ts.astimezone().date()
+
+    # Documents the trap: in any zone ahead of UTC these genuinely differ, and
+    # the UTC reading is the wrong one to compare against date.today().
+    ist = timezone(timedelta(hours=5, minutes=30))
+    assert ts.astimezone(ist).date() != ts.date()
+
+
+def test_session_logged_now_always_counts_as_today(client):
+    """The user-visible symptom: a session just logged shows under 'today'."""
+    _log_focus(client, 30)
+    assert client.get(f"{BASE}/focus/stats").json()["sessions_today"] == 1

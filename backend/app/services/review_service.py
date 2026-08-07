@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import SUCCESS_STATUSES
 from app.models.habit import Habit
+from app.core.timeutil import local_day
 from app.schemas.review import ReviewItem, ReviewMetric, WeeklyReview
 from app.services import streaks
 from app.services.habit_service import HabitService
@@ -153,7 +154,10 @@ class WeeklyReviewService:
     def _tasks_completed(self, start: date, end: date) -> int:
         n = 0
         for t in self.tasks.tasks.list_all():
-            if t.completed_at and start <= t.completed_at.date() <= end:
+            # local_day, not .date(): a task finished late in the evening must
+            # count toward the week the user actually finished it in.
+            day = local_day(t.completed_at)
+            if day and start <= day <= end:
                 n += 1
         return n
 

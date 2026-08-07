@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import OPEN_TASK_STATUSES, TaskStatus
 from app.models.note import Note
+from app.core.timeutil import local_day
 from app.schemas.search import SearchResponse, SearchResult
 from app.services.habit_service import HabitService
 from app.services.journal_service import JournalService
@@ -265,12 +266,12 @@ class SearchService:
             if "completed" in p.statuses and t.status != TaskStatus.DONE:
                 continue
             if p.start:
-                d = t.due_date or (t.completed_at.date() if t.completed_at else None)
+                d = t.due_date or local_day(t.completed_at)
                 if not d or not (p.start <= d <= p.end):
                     continue
             if p.keywords and not _matches(p.keywords, f"{t.title} {t.description or ''}"):
                 continue
-            when = t.due_date or (t.completed_at.date() if t.completed_at else None)
+            when = t.due_date or local_day(t.completed_at)
             out.append(
                 SearchResult(
                     type="task",

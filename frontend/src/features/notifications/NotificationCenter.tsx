@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   Bell,
@@ -21,6 +20,7 @@ import {
   useNotifRead,
   useNotifications,
 } from "@/hooks/queries";
+import { AnchoredOverlay } from "@/components/ui/anchored-overlay";
 import { cn } from "@/lib/utils";
 import type { NotificationItem } from "@/lib/types";
 import { isDesktop, notify, requestNotificationPermission } from "@/lib/desktop";
@@ -149,25 +149,13 @@ export function NotificationCenter() {
   const dismiss = useNotifDismiss();
   const readAll = useNotifReadAll();
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const items = data?.notifications ?? [];
   const unread = data?.unread ?? 0;
   const alerts = useDesktopAlerts(items);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // Dismissal (outside click, Escape) is handled by AnchoredOverlay's scrim.
 
   const openItem = (n: NotificationItem) => {
     if (!n.read) read.mutate(n.id);
@@ -178,11 +166,13 @@ export function NotificationCenter() {
   };
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div className="relative">
       <button
+        ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
-        className="glass relative grid h-9 w-9 place-items-center rounded-xl text-ink-muted transition-colors hover:text-ink"
+        aria-expanded={open}
+        className="glass pressable relative grid h-9 w-9 place-items-center rounded-xl text-ink-muted hover:text-ink"
       >
         <Bell size={16} />
         {unread > 0 && (
@@ -192,16 +182,9 @@ export function NotificationCenter() {
         )}
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 340, damping: 28 }}
-            className="glass absolute right-0 top-11 z-50 w-[340px] overflow-hidden rounded-2xl"
-          >
-            <div className="flex items-center justify-between border-b border-border/10 px-3 py-2.5">
+      <AnchoredOverlay open={open} onClose={() => setOpen(false)} anchorRef={btnRef} width={360}>
+        <>
+          <div className="flex shrink-0 items-center justify-between border-b border-border/10 px-3 py-2.5">
               <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                 Notifications
                 {unread > 0 && (
@@ -237,26 +220,25 @@ export function NotificationCenter() {
               </div>
             </div>
 
-            <div className="max-h-[60vh] space-y-1 overflow-y-auto p-2">
-              {items.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">
-                  <BellOff size={20} className="text-ink-faint" />
-                  <p className="text-[13px] text-ink-muted">You're all caught up.</p>
-                </div>
-              ) : (
-                items.map((n) => (
-                  <NotificationRow
-                    key={n.id}
-                    n={n}
-                    onOpen={openItem}
-                    onDismiss={(id) => dismiss.mutate(id)}
-                  />
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+            {items.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">
+                <BellOff size={20} className="text-ink-faint" />
+                <p className="text-[13px] text-ink-muted">You're all caught up.</p>
+              </div>
+            ) : (
+              items.map((n) => (
+                <NotificationRow
+                  key={n.id}
+                  n={n}
+                  onOpen={openItem}
+                  onDismiss={(id) => dismiss.mutate(id)}
+                />
+              ))
+            )}
+          </div>
+        </>
+      </AnchoredOverlay>
     </div>
   );
 }

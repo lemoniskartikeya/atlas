@@ -6,6 +6,7 @@ from typing import Optional, Sequence
 
 from sqlalchemy.orm import Session
 
+from app.core.timeutil import local_day
 from app.domain.enums import Priority, TaskStatus
 from app.models.task import Task
 from app.repositories.task_repo import TaskRepository
@@ -87,14 +88,7 @@ class TaskService:
         rows = list(self.tasks.completed(limit=max(limit, 500)))
 
         def day_of(task: Task) -> date:
-            # completed_at may come back naive from SQLite; treat it as UTC and
-            # read it in local terms so "today" agrees with the rest of the app.
-            ts = task.completed_at
-            if ts is None:
-                return today
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
-            return ts.astimezone().date()
+            return local_day(task.completed_at, today)
 
         window_start = today - timedelta(days=days - 1)
         week_start = today - timedelta(days=today.weekday())

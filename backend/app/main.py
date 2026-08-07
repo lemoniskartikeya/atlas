@@ -11,6 +11,7 @@ from app.api.v1 import (
     analytics,
     auth,
     backup,
+    calendar,
     coach,
     dashboard,
     focus,
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
 
     for router in (
         auth.router,
+        calendar.router,
         habits.router,
         tasks.router,
         journal.router,

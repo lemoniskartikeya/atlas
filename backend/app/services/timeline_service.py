@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.domain.enums import SUCCESS_STATUSES, HabitLogStatus
 from app.models.focus import FocusSession
 from app.models.habit import Habit
+from app.core.timeutil import local_day
 from app.schemas.timeline import TimelineEvent, TimelineResponse
 from app.services import streaks
 from app.services.habit_service import HabitService
@@ -95,7 +96,7 @@ class TimelineService:
                     id=f"created:{habit.id}",
                     kind="habit_created",
                     timestamp=_naive(habit.created_at),
-                    date=habit.created_at.date() if habit.created_at else today,
+                    date=local_day(habit.created_at, today),
                     title=f"Started tracking {habit.title}",
                     color=habit.color,
                     route="/habits",
@@ -174,7 +175,9 @@ class TimelineService:
                     id=f"task:{task.id}",
                     kind="task",
                     timestamp=ts,
-                    date=ts.date(),
+                    # `ts` is naive UTC (kept for stable cross-source sorting);
+                    # the displayed day must still be the user's local one.
+                    date=local_day(task.completed_at),
                     title=f"Completed task — {task.title}",
                     route="/tasks",
                 )
@@ -191,7 +194,7 @@ class TimelineService:
                     id=f"focus:{fs.id}",
                     kind="focus",
                     timestamp=ts,
-                    date=ts.date(),
+                    date=local_day(fs.started_at),
                     title=f"Focused for {fs.duration_min} min",
                     detail=fs.note or detail,
                     route="/focus",

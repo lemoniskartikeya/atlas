@@ -17,7 +17,7 @@ export function Topbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         >
           <Search size={14} />
           <span>Search</span>
-          <kbd className="ml-1 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd>
+          <kbd className="ml-1 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-medium">K</kbd>
         </button>
         <button
           onClick={onOpenPalette}

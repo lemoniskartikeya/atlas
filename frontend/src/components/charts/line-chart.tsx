@@ -17,8 +17,25 @@ interface LineChartProps {
   unit?: string;
   /** Fix the y-domain instead of deriving it from the data. */
   domain?: [number, number];
-  /** Called as the cursor moves so the parent can show live context. */
-  onHoverChange?: (index: number | null) => void;
+  /**
+   * Called as the cursor moves. `t` is a continuous position in the series
+   * (2.4 = 40% of the way from point 2 to point 3), not a snapped index.
+   */
+  onHoverChange?: (t: number | null) => void;
+}
+
+/** Linear interpolation between the two samples surrounding a fractional index. */
+function valueAt(data: LinePoint[], t: number): number {
+  if (data.length === 1) return data[0].value;
+  const lo = Math.floor(t);
+  const hi = Math.min(lo + 1, data.length - 1);
+  const frac = t - lo;
+  return data[lo].value + (data[hi].value - data[lo].value) * frac;
+}
+
+/** Label for a fractional position — the nearer of the two bracketing days. */
+function labelAt(data: LinePoint[], t: number): string {
+  return data[Math.min(data.length - 1, Math.max(0, Math.round(t)))].label;
 }
 
 const PAD = { left: 4, right: 4, top: 14, bottom: 18 };
@@ -43,7 +60,8 @@ export function LineChart({
 }: LineChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
-  const [idx, setIdx] = useState<number | null>(null);
+  /** Continuous position in the series, not a snapped index. */
+  const [pos, setPos] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -107,7 +125,7 @@ export function LineChart({
 
   const setHover = useCallback(
     (next: number | null) => {
-      setIdx((cur) => {
+      setPos((cur) => {
         if (cur !== next) onHoverChange?.(next);
         return next;
       });
@@ -120,14 +138,29 @@ export function LineChart({
     const rect = e.currentTarget.getBoundingClientRect();
     const rel = e.clientX - rect.left - PAD.left;
     const ratio = geom.innerW === 0 ? 0 : rel / geom.innerW;
-    const i = Math.round(ratio * (data.length - 1));
-    setHover(Math.max(0, Math.min(data.length - 1, i)));
+    // Deliberately NOT rounded: the readout tracks the cursor continuously
+    // across the series rather than snapping between recorded days.
+    const t = ratio * (data.length - 1);
+    setHover(Math.max(0, Math.min(data.length - 1, t)));
   };
 
   if (data.length === 0) return null;
 
-  const active = idx != null ? data[idx] : null;
   const gradId = "line-fill";
+
+  // Cursor geometry, interpolated between the bracketing samples.
+  const cursor =
+    pos == null || !geom
+      ? null
+      : (() => {
+          const value = valueAt(data, pos);
+          return {
+            value,
+            label: labelAt(data, pos),
+            cx: geom.x(pos),
+            cy: geom.y(value),
+          };
+        })();
 
   return (
     <div ref={wrapRef} className={cn("relative select-none", className)} style={{ height }}>
@@ -174,25 +207,20 @@ export function LineChart({
               strokeLinejoin="round"
             />
 
-            {active && idx != null && (
+            {cursor && (
               <>
                 <line
-                  x1={geom.x(idx)}
-                  x2={geom.x(idx)}
+                  x1={cursor.cx}
+                  x2={cursor.cx}
                   y1={PAD.top}
                   y2={height - PAD.bottom}
                   stroke="rgb(var(--accent) / 0.35)"
                   strokeWidth={1}
                 />
+                <circle cx={cursor.cx} cy={cursor.cy} r={7} fill="rgb(var(--accent) / 0.16)" />
                 <circle
-                  cx={geom.x(idx)}
-                  cy={geom.y(active.value)}
-                  r={7}
-                  fill="rgb(var(--accent) / 0.16)"
-                />
-                <circle
-                  cx={geom.x(idx)}
-                  cy={geom.y(active.value)}
+                  cx={cursor.cx}
+                  cy={cursor.cy}
                   r={3.5}
                   fill="rgb(var(--accent))"
                   stroke="rgb(var(--panel))"
@@ -202,7 +230,7 @@ export function LineChart({
             )}
 
             {/* Endpoint marker so the series reads as "now" at rest. */}
-            {!active && (
+            {!cursor && (
               <circle
                 cx={geom.pts[geom.pts.length - 1][0]}
                 cy={geom.pts[geom.pts.length - 1][1]}
@@ -214,22 +242,22 @@ export function LineChart({
             )}
           </svg>
 
-          {/* Compact tooltip: value large, date small underneath. Sized to its
-              content and clamped inside the plot so it never runs off-edge. */}
-          {active && idx != null && (
+          {/* Just the number, in a pill that shrinks to it.
+              `whitespace-nowrap` + `w-fit` are load-bearing: without them the
+              label wraps against the container and the pill inflates into a
+              large rectangle. The date lives in the insight line below the
+              chart, which already tracks the cursor. */}
+          {cursor && (
             <div
-              className="glass pointer-events-none absolute z-10 rounded-lg px-2 py-1 text-center leading-tight shadow-sm"
+              className="pointer-events-none absolute z-10 w-fit whitespace-nowrap rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-semibold leading-none tnum text-white shadow-sm"
               style={{
-                left: Math.min(Math.max(geom.x(idx), 30), Math.max(w - 30, 30)),
-                top: Math.max(geom.y(active.value) - 46, 0),
+                left: Math.min(Math.max(cursor.cx, 22), Math.max(w - 22, 22)),
+                top: Math.max(cursor.cy - 24, 0),
                 transform: "translateX(-50%)",
               }}
             >
-              <div className="text-[13px] font-semibold tnum text-ink">
-                {formatValue(active.value)}
-                {unit && <span className="text-[10px] font-normal text-ink-faint">{unit}</span>}
-              </div>
-              <div className="text-[10px] text-ink-faint">{active.label}</div>
+              {formatValue(cursor.value)}
+              {unit && <span className="font-normal opacity-70">{unit}</span>}
             </div>
           )}
 

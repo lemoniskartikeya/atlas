@@ -28,6 +28,7 @@ import type {
   SimulationResponse,
   AuthResponse,
   AuthStatus,
+  CalendarMonth,
   CompletedTasks,
   RegisterBody,
   Task,
@@ -80,6 +81,9 @@ async function http<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   /** Liveness probe — used to gate the UI while the backend boots. */
   health: () => http<{ status: string }>("/health"),
+
+  calendar: (year: number, month: number) =>
+    http<CalendarMonth>(`/calendar?year=${year}&month=${month}`),
 
   authStatus: () => http<AuthStatus>("/auth/status"),
   register: (body: RegisterBody) =>

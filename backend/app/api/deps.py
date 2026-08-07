@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_session
 from app.services.analytics_service import AnalyticsService
 from app.services.backup_service import BackupService
+from app.services.calendar_service import CalendarService
 from app.services.coach_service import CoachService
 from app.services.dashboard_service import DashboardService
 from app.services.focus_service import FocusService
@@ -40,6 +41,10 @@ def analytics_service(session: Session = Depends(get_session)) -> AnalyticsServi
 
 def dashboard_service(session: Session = Depends(get_session)) -> DashboardService:
     return DashboardService(session)
+
+
+def calendar_service(session: Session = Depends(get_session)) -> CalendarService:
+    return CalendarService(session)
 
 
 def planner_service(session: Session = Depends(get_session)) -> PlannerService:

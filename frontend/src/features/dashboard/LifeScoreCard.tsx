@@ -66,17 +66,29 @@ export function LifeScoreCard({ d }: { d: Dashboard }) {
     if (!stats || points.length === 0) return null;
 
     if (hover != null) {
-      const cur = points[hover];
-      const prev = hover > 0 ? points[hover - 1] : null;
-      const delta = prev ? cur.value - prev.value : 0;
-      const vsAvg = cur.value - stats.avg;
+      // `hover` is a continuous position in the series, so the reading between
+      // two days is interpolated rather than snapped to whichever is closer.
+      const lo = Math.floor(hover);
+      const hi = Math.min(lo + 1, points.length - 1);
+      const frac = hover - lo;
+      const value = points[lo].value + (points[hi].value - points[lo].value) * frac;
+
+      const nearest = Math.min(points.length - 1, Math.max(0, Math.round(hover)));
+      const prev = nearest > 0 ? points[nearest - 1] : null;
+      const delta = prev ? points[nearest].value - prev.value : 0;
+      const vsAvg = value - stats.avg;
+      const between = frac > 0.02 && frac < 0.98 && lo !== hi;
+
       return (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-[12px] font-medium text-ink">{cur.label}</span>
+          <span className="text-[12px] font-medium text-ink">
+            {between ? `${points[lo].label} → ${points[hi].label}` : points[nearest].label}
+          </span>
+          <span className="text-[12px] tnum text-ink-muted">{value.toFixed(1)}</span>
           {prev && (
             <Insight tone={delta > 0.5 ? "up" : delta < -0.5 ? "down" : "flat"}>
               {delta > 0 ? "+" : ""}
-              {delta.toFixed(1)} vs previous day
+              {delta.toFixed(1)} day over day
             </Insight>
           )}
           <Insight tone={vsAvg > 0 ? "up" : vsAvg < 0 ? "down" : "flat"}>
@@ -143,7 +155,9 @@ export function LifeScoreCard({ d }: { d: Dashboard }) {
             height={168}
             unit="/100"
             onHoverChange={setHover}
-            formatValue={(n) => String(Math.round(n))}
+            // One decimal, so a reading between two days visibly moves with the
+            // cursor instead of stepping between whole numbers.
+            formatValue={(n) => n.toFixed(1)}
           />
           <div className="mt-2 min-h-[20px]">{insight}</div>
         </div>

@@ -45,6 +45,14 @@ export function useTasks(scope: "all" | "today" | "upcoming" | "open" = "all") {
   return useQuery({ queryKey: keys.tasks(scope), queryFn: () => api.tasks(scope) });
 }
 
+export function useCalendar(year: number, month: number) {
+  return useQuery({
+    queryKey: ["calendar", year, month],
+    queryFn: () => api.calendar(year, month),
+    placeholderData: (prev) => prev, // month nav shouldn't flash a skeleton
+  });
+}
+
 export function useCompletedTasks(days = 30, limit = 200) {
   return useQuery({
     queryKey: ["tasks", "completed", days, limit],
@@ -68,6 +76,7 @@ function useRefreshEverything() {
     qc.invalidateQueries({ queryKey: ["simulation"] });
     qc.invalidateQueries({ queryKey: ["review"] });
     qc.invalidateQueries({ queryKey: ["timeline"] });
+    qc.invalidateQueries({ queryKey: ["calendar"] });
   };
 }
 

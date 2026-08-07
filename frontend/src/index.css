@@ -327,6 +327,21 @@ body {
   animation: shimmer 1.6s linear infinite;
 }
 
+/* Theme switching rides the View Transitions API. The default cross-fade is
+   switched off so the incoming theme is revealed by the expanding circle in
+   useTheme instead of dissolving through the old one. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-aurora::before {
     animation: none;

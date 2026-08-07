@@ -102,6 +102,55 @@ export interface Task {
   updated_at: string;
 }
 
+/* ------------------------------------------------------------------- calendar */
+
+export interface CalendarHabit {
+  id: string;
+  title: string;
+  color?: string | null;
+  status: "completed" | "partial" | "skipped" | "due";
+}
+
+export interface CalendarTask {
+  id: string;
+  title: string;
+  priority: Priority;
+  status: TaskStatus;
+  completed_here: boolean;
+}
+
+export interface CalendarDay {
+  date: string;
+  in_month: boolean;
+  is_today: boolean;
+  is_future: boolean;
+  habits: CalendarHabit[];
+  tasks: CalendarTask[];
+  habits_done: number;
+  habits_due: number;
+  tasks_due: number;
+  tasks_completed: number;
+  mood?: number | null;
+  energy?: number | null;
+  sleep_hours?: number | null;
+  has_journal: boolean;
+  focus_minutes: number;
+  focus_sessions: number;
+  intensity: number;
+}
+
+export interface CalendarMonth {
+  year: number;
+  month: number;
+  label: string;
+  days: CalendarDay[];
+  total_habits_done: number;
+  total_tasks_completed: number;
+  total_focus_minutes: number;
+  journal_days: number;
+  perfect_days: number;
+}
+
 /* ------------------------------------------------------------------- accounts */
 
 export interface AtlasUser {

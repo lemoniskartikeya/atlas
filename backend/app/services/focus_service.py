@@ -7,16 +7,21 @@ from typing import Optional, Sequence
 
 from sqlalchemy.orm import Session
 
+from app.core.timeutil import local_day
 from app.models.focus import FocusSession
 from app.repositories.focus_repo import FocusRepository
 from app.schemas.focus import FocusSessionCreate
 
 
 def _local_day(dt: datetime) -> date:
-    """The calendar day a session belongs to (naive-UTC → date)."""
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt.date()
+    """The calendar day a session belongs to, in the user's own timezone.
+
+    Sessions are stored as UTC, but "today" everywhere else in the app means
+    the local date. Reading these back in UTC made every session logged after
+    18:30 IST fall on the previous day, so the focus stats silently reset to
+    zero for the rest of the evening.
+    """
+    return local_day(dt)
 
 
 class FocusService:
