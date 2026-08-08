@@ -62,7 +62,19 @@ function ModelQuality() {
   }));
 
   const delta = data.delta_vs_previous;
-  const DeltaIcon = delta == null ? Minus : delta > 0 ? TrendingUp : TrendingDown;
+  // Only claim a direction when the backend says the change survives its own
+  // measurement noise. `false` = smaller than the spread; `null` = the two
+  // versions weren't scored the same way, so the subtraction means nothing.
+  // Either way, showing it in red as a regression would invent a finding.
+  const isNoise = data.delta_is_meaningful === false;
+  const incomparable = data.delta_is_meaningful == null;
+  const claimsDirection = data.delta_is_meaningful === true && delta != null;
+  const DeltaIcon = !claimsDirection ? Minus : delta! > 0 ? TrendingUp : TrendingDown;
+  const latest = scored.at(-1);
+  const spread =
+    latest?.roc_auc_min != null && latest?.roc_auc_max != null
+      ? `${pct(latest.roc_auc_min, 0)}–${pct(latest.roc_auc_max, 0)}`
+      : null;
 
   return (
     <div className="space-y-3">
@@ -74,23 +86,61 @@ function ModelQuality() {
           <span className="ml-1.5 text-[11px] uppercase tracking-wide text-ink-faint">
             current accuracy
           </span>
+          {spread && (
+            <span className="ml-1.5 text-[11px] text-ink-faint" title="Range across the time-ordered folds this was scored on.">
+              ({spread} across folds)
+            </span>
+          )}
         </div>
         {delta != null && (
           <span
             className={cn(
               "flex items-center gap-1 text-[12px]",
-              delta > 0 ? "text-success" : delta < 0 ? "text-danger" : "text-ink-muted",
+              !claimsDirection
+                ? "text-ink-muted"
+                : delta > 0
+                  ? "text-success"
+                  : "text-danger",
             )}
           >
             <DeltaIcon size={13} />
-            {delta > 0 ? "+" : ""}
-            {(delta * 100).toFixed(1)} pts vs previous
+            {claimsDirection ? (
+              <>
+                {delta > 0 ? "+" : ""}
+                {(delta * 100).toFixed(1)} pts vs previous
+              </>
+            ) : isNoise ? (
+              "no measurable change vs previous"
+            ) : (
+              "not comparable with the previous version"
+            )}
           </span>
         )}
         <span className="text-[12px] text-ink-faint">
           {data.total} version{data.total !== 1 ? "s" : ""} trained
         </span>
       </div>
+
+      {isNoise && (
+        <p className="text-[12px] text-ink-faint">
+          The score moves by {data.noise_floor != null ? pct(data.noise_floor, 0) : "more"}{" "}
+          between folds of the same model, so a {Math.abs(delta! * 100).toFixed(1)}-point
+          difference between versions doesn&apos;t tell you anything yet
+          {latest?.n_test_neg_min != null
+            ? ` — one fold had only ${latest.n_test_neg_min} missed days to score against`
+            : ""}
+          . More history will narrow it.
+        </p>
+      )}
+
+      {incomparable && delta != null && (
+        <p className="text-[12px] text-ink-faint">
+          Earlier versions were scored on a single split of your history; newer ones are
+          scored across several, which is steadier but not the same measurement. The two
+          numbers can&apos;t be subtracted meaningfully — the comparison becomes reliable
+          from the next retrain onward.
+        </p>
+      )}
 
       {points.length > 1 ? (
         <LineChart data={points} height={120} unit="%" formatValue={(n) => n.toFixed(1)} />

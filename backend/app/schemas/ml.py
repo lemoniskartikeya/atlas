@@ -9,10 +9,21 @@ from pydantic import BaseModel
 class MLMetrics(BaseModel):
     accuracy: Optional[float] = None
     roc_auc: Optional[float] = None
+    #: Range of ROC-AUC across the rolling-origin folds — the width of the
+    #: estimate above, which on a personal dataset is substantial.
+    roc_auc_min: Optional[float] = None
+    roc_auc_max: Optional[float] = None
     brier: Optional[float] = None
+    n_folds: Optional[int] = None
+    #: Total examples the model was fitted on.
+    n_examples: Optional[int] = None
+    #: Kept for models trained before the rename; it always meant ``n_examples``.
     n_train: Optional[int] = None
     n_test: Optional[int] = None
+    n_test_neg_min: Optional[int] = None
     positive_rate: Optional[float] = None
+    eval: Optional[str] = None
+    eval_note: Optional[str] = None
 
 
 class MLStatus(BaseModel):

@@ -134,14 +134,25 @@ export interface ModelVersion {
   trained_at?: string | null;
   model_type?: string | null;
   roc_auc?: number | null;
+  /** Range across the rolling-origin folds — the width of the estimate. */
+  roc_auc_min?: number | null;
+  roc_auc_max?: number | null;
   accuracy?: number | null;
   n_samples?: number | null;
   n_rows?: number | null;
   n_test?: number | null;
+  /** Smallest minority-class count across folds — the real limit on trust. */
+  n_test_neg_min?: number | null;
+  eval?: string | null;
+  eval_note?: string | null;
 }
 
 export interface ModelHistory {
   versions: ModelVersion[];
+  /** How much the score moves between folds of the *same* model. */
+  noise_floor?: number | null;
+  /** False when the change is smaller than that — i.e. it means nothing. */
+  delta_is_meaningful?: boolean | null;
   total: number;
   latest_roc_auc?: number | null;
   best_roc_auc?: number | null;
