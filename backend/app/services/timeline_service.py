@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import select
 
+from app.core.scoping import current_user_id
 from app.domain.enums import SUCCESS_STATUSES, HabitLogStatus
 from app.models.focus import FocusSession
 from app.models.habit import Habit
@@ -186,7 +187,11 @@ class TimelineService:
 
     def _focus_events(self) -> list[TimelineEvent]:
         out: list[TimelineEvent] = []
-        for fs in self.session.scalars(select(FocusSession)):
+        for fs in self.session.scalars(
+            select(FocusSession).where(
+                FocusSession.user_id == current_user_id(self.session)
+            )
+        ):
             ts = _naive(fs.started_at)
             detail = f"{fs.distractions} distraction{'s' if fs.distractions != 1 else ''}" if fs.distractions else None
             out.append(

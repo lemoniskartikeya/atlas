@@ -18,6 +18,7 @@ from typing import Iterable, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.scoping import current_user_id
 from app.domain.enums import SUCCESS_STATUSES
 from app.models.feedback import RecommendationOutcome
 from app.models.habit import HabitLog
@@ -56,7 +57,8 @@ class FeedbackService:
             row.rec_id
             for row in self.session.scalars(
                 select(RecommendationOutcome).where(
-                    RecommendationOutcome.shown_on == today
+                    RecommendationOutcome.user_id == current_user_id(self.session),
+                    RecommendationOutcome.shown_on == today,
                 )
             )
         }
@@ -83,6 +85,7 @@ class FeedbackService:
         pending = list(
             self.session.scalars(
                 select(RecommendationOutcome).where(
+                    RecommendationOutcome.user_id == current_user_id(self.session),
                     RecommendationOutcome.followed.is_(None),
                     RecommendationOutcome.shown_on < today,
                 )
@@ -93,7 +96,10 @@ class FeedbackService:
 
         days = {row.shown_on for row in pending}
         logs = self.session.scalars(
-            select(HabitLog).where(HabitLog.date.in_(list(days)))
+            select(HabitLog).where(
+                HabitLog.user_id == current_user_id(self.session),
+                HabitLog.date.in_(list(days)),
+            )
         )
         success: set[tuple[str, date]] = {
             (log.habit_id, log.date) for log in logs if log.status in SUCCESS_STATUSES
@@ -123,6 +129,7 @@ class FeedbackService:
 
         rows = self.session.scalars(
             select(RecommendationOutcome).where(
+                RecommendationOutcome.user_id == current_user_id(self.session),
                 RecommendationOutcome.shown_on >= cutoff,
                 RecommendationOutcome.followed.is_not(None),
             )

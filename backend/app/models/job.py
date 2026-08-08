@@ -13,10 +13,10 @@ from typing import Optional
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin
 
 
-class JobRun(UUIDMixin, TimestampMixin, Base):
+class JobRun(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "job_runs"
 
     job_id: Mapped[str] = mapped_column(String(40), index=True)

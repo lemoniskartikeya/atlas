@@ -57,6 +57,20 @@ export const session = {
 /** Thrown for 401s so callers can distinguish "signed out" from a real failure. */
 export class UnauthorizedError extends Error {}
 
+type ExpiryHandler = () => void;
+let onExpired: ExpiryHandler | null = null;
+
+/**
+ * Register what to do when the backend rejects a token we actually sent.
+ *
+ * Every data endpoint requires an account, so a session that expires mid-use
+ * would otherwise turn the whole app into a wall of errors. AuthProvider uses
+ * this to drop the dead token and fall back to the sign-in screen.
+ */
+export function onSessionExpired(handler: ExpiryHandler | null): void {
+  onExpired = handler;
+}
+
 async function http<T>(path: string, options?: RequestInit): Promise<T> {
   const token = session.get();
   const res = await fetch(BASE + path, {
@@ -75,7 +89,12 @@ async function http<T>(path: string, options?: RequestInit): Promise<T> {
     } catch {
       /* non-JSON error body */
     }
-    if (res.status === 401) throw new UnauthorizedError(detail);
+    if (res.status === 401) {
+      // Only a token that was sent and refused means "expired". A 401 with no
+      // token is just an unauthenticated probe (the boot-time status check).
+      if (token) onExpired?.();
+      throw new UnauthorizedError(detail);
+    }
     throw new Error(`${res.status} ${detail}`);
   }
   if (res.status === 204) return undefined as T;

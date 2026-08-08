@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { api, session } from "@/lib/api";
+import { api, onSessionExpired, session } from "@/lib/api";
 import type { AtlasUser, PasswordPolicy, RegisterBody } from "@/lib/types";
 
 interface AuthState {
@@ -53,6 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  // Sessions expire, and now that every data endpoint requires one, a dead
+  // token would leave every page erroring with no way back. Drop it and let
+  // the sign-in screen take over instead.
+  useEffect(() => {
+    onSessionExpired(() => {
+      session.clear();
+      setUser(null);
+      qc.clear();
+    });
+    return () => onSessionExpired(null);
+  }, [qc]);
 
   const adopt = useCallback(
     (token: string, u: AtlasUser) => {

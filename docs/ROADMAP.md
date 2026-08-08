@@ -79,8 +79,10 @@ The core differentiator. Built as a `learning` service package over the historic
   grouped by day; completing a task plays an exit animation instead of vanishing
 - ✅ **Conversational AI Coach** — answers general questions, not just Atlas
   intents; API key managed in-app (Settings → AI Coach) and stored locally
-- ⬜ Multi-user data scoping (accounts are currently an identity/lock layer over a
-  single local vault, not a per-user partition)
+- ✅ **Multi-user data scoping** — accounts are a real partition, not just a lock.
+  Every vault row carries an owner, every data endpoint requires a session, and
+  each account gets its own model, job schedule and backups. See
+  `docs/SCOPING.md`.
 
 ## Phase 9 — Closing the learning loops  ✅
 Atlas could always *predict*. This phase is what makes it actually improve with use.

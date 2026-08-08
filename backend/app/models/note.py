@@ -7,10 +7,10 @@ from typing import Optional
 from sqlalchemy import Boolean, Date, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin
 
 
-class Note(UUIDMixin, TimestampMixin, Base):
+class Note(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "notes"
 
     title: Mapped[str] = mapped_column(String(300), default="Untitled")

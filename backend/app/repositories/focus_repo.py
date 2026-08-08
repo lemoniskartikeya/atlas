@@ -15,6 +15,10 @@ class FocusRepository(BaseRepository[FocusSession]):
     def recent(self, limit: int = 20) -> Sequence[FocusSession]:
         return list(
             self.session.scalars(
-                select(FocusSession).order_by(FocusSession.started_at.desc()).limit(limit)
+                self.scoped(
+                    select(FocusSession)
+                    .order_by(FocusSession.started_at.desc())
+                    .limit(limit)
+                )
             )
         )

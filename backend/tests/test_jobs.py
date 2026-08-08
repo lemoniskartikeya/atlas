@@ -113,7 +113,7 @@ def test_retrain_skips_without_enough_new_data(db_session, monkeypatch):
     # Pretend the last model was trained on far more rows than exist now, so
     # the "enough new evidence?" gate is the thing under test.
     monkeypatch.setattr(
-        registry, "latest_meta", lambda: {"version": "v1", "metrics": {"n_rows": 10_000}}
+        registry, "latest_meta", lambda _uid: {"version": "v1", "metrics": {"n_rows": 10_000}}
     )
 
     result = retrain_model(db_session)
@@ -128,7 +128,7 @@ def test_retrain_proceeds_once_enough_new_data_exists(client, db_session, monkey
         "app.learning.registry", reason="ML extras not installed"
     )
     monkeypatch.setattr(
-        registry, "latest_meta", lambda: {"version": "v1", "metrics": {"n_rows": 0}}
+        registry, "latest_meta", lambda _uid: {"version": "v1", "metrics": {"n_rows": 0}}
     )
 
     # Enough fresh history to clear the gate.

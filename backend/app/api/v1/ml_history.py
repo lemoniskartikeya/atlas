@@ -6,8 +6,10 @@ plain JSON on disk, so it stays readable in builds without the ML stack. Only
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.api.deps import current_user
+from app.models.user import User
 from app.schemas.ml_history import ModelHistory, ModelVersion
 from app.services import ml_gateway
 
@@ -15,9 +17,9 @@ router = APIRouter(prefix="/ml", tags=["ml"])
 
 
 @router.get("/history", response_model=ModelHistory)
-def history():
+def history(user: User = Depends(current_user)):
     versions: list[ModelVersion] = []
-    for entry in ml_gateway.model_history():
+    for entry in ml_gateway.model_history(user.id):
         metrics = entry.get("metrics") or {}
         versions.append(
             ModelVersion(

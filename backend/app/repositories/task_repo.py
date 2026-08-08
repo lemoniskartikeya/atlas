@@ -15,12 +15,16 @@ class TaskRepository(BaseRepository[Task]):
     model = Task
 
     def list_all(self) -> Sequence[Task]:
-        return list(self.session.scalars(select(Task).order_by(Task.created_at.desc())))
+        return list(
+            self.session.scalars(
+                self.scoped(select(Task).order_by(Task.created_at.desc()))
+            )
+        )
 
     def open_tasks(self) -> Sequence[Task]:
         return list(
             self.session.scalars(
-                select(Task).where(Task.status.in_(list(OPEN_TASK_STATUSES)))
+                self.scoped(select(Task).where(Task.status.in_(list(OPEN_TASK_STATUSES))))
             )
         )
 
@@ -33,20 +37,24 @@ class TaskRepository(BaseRepository[Task]):
         """
         return list(
             self.session.scalars(
-                select(Task)
-                .where(Task.status == TaskStatus.DONE, Task.completed_at.is_not(None))
-                .order_by(Task.completed_at.desc())
-                .limit(limit)
+                self.scoped(
+                    select(Task)
+                    .where(Task.status == TaskStatus.DONE, Task.completed_at.is_not(None))
+                    .order_by(Task.completed_at.desc())
+                    .limit(limit)
+                )
             )
         )
 
     def due_on_or_before(self, d: date) -> Sequence[Task]:
         return list(
             self.session.scalars(
-                select(Task).where(
-                    Task.status.in_(list(OPEN_TASK_STATUSES)),
-                    Task.due_date.is_not(None),
-                    Task.due_date <= d,
+                self.scoped(
+                    select(Task).where(
+                        Task.status.in_(list(OPEN_TASK_STATUSES)),
+                        Task.due_date.is_not(None),
+                        Task.due_date <= d,
+                    )
                 )
             )
         )

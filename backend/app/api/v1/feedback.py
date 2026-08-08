@@ -6,7 +6,7 @@ from datetime import date
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.database import get_session
+from app.api.deps import scoped_session
 from app.schemas.feedback import EffectivenessResponse, FamilyEffectiveness
 from app.services.feedback_service import MIN_SAMPLES_FOR_SIGNAL, FeedbackService
 
@@ -23,7 +23,7 @@ _LABELS = {
 
 
 @router.get("/effectiveness", response_model=EffectivenessResponse)
-def effectiveness(session: Session = Depends(get_session)):
+def effectiveness(session: Session = Depends(scoped_session)):
     """Hit-rate per style of recommendation, and whether it's steering ranking."""
     svc = FeedbackService(session)
     today = date.today()

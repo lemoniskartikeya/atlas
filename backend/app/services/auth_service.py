@@ -4,9 +4,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger
 from app.core.security import (
     hash_password,
     hash_token,
@@ -15,7 +16,10 @@ from app.core.security import (
     session_expiry,
     verify_password,
 )
+from app.models import owned_models
 from app.models.user import AuthSession, User
+
+log = get_logger("atlas.auth")
 
 
 class AuthError(Exception):
@@ -45,6 +49,21 @@ class AuthService:
     def user_count(self) -> int:
         return len(list(self.session.scalars(select(User.id))))
 
+    def all_users(self) -> list[User]:
+        """Every account, oldest first.
+
+        Background work (retraining, backups) has no request to take an
+        identity from, so it walks this list and acts as each account in turn.
+        """
+        return list(self.session.scalars(select(User).order_by(User.created_at)))
+
+    def all_ids(self) -> list[str]:
+        return list(self.session.scalars(select(User.id).order_by(User.created_at)))
+
+    def first_user(self) -> Optional[User]:
+        """The earliest-created account — the owner of a pre-accounts vault."""
+        return self.session.scalars(select(User).order_by(User.created_at)).first()
+
     # ---------------------------------------------------------------- register
     def register(
         self,
@@ -71,6 +90,8 @@ class AuthService:
         if email and self.by_email(email):
             raise AuthError("That email is already registered.", fields=["email"])
 
+        first_account = self.user_count() == 0
+
         user = User(
             username=username,
             email=email,
@@ -79,7 +100,68 @@ class AuthService:
         )
         self.session.add(user)
         self.session.commit()
+
+        if first_account:
+            claimed = self.claim_orphan_vault(user)
+            if claimed:
+                log.info(
+                    "auth.vault_claimed",
+                    extra={"username": user.username, "rows": claimed},
+                )
         return user
+
+    def claim_orphan_vault(self, user: User) -> int:
+        """Give this account any data that predates accounts entirely.
+
+        Atlas stored habits, logs and journals long before it had users, and an
+        upgrade must not make that history vanish. Rather than have the
+        migration invent an owner, unowned rows sit in the database as
+        ``user_id IS NULL`` — visible to nobody — until the first account
+        exists to claim them. Called exactly once, when that account is created.
+
+        Deliberately a bulk UPDATE against ``user_id IS NULL``: it can only ever
+        touch rows that no account owns, so it cannot move data between
+        accounts even if it were somehow called again.
+        """
+        total = 0
+        for model in owned_models():
+            result = self.session.execute(
+                update(model).where(model.user_id.is_(None)).values(user_id=user.id)
+            )
+            total += result.rowcount or 0
+        self.session.commit()
+        self._adopt_legacy_models(user)
+        return total
+
+    @staticmethod
+    def _adopt_legacy_models(user: User) -> int:
+        """Move a pre-scoping model registry into this account's folder.
+
+        Models used to live directly in ``data/models/``; they are now keyed by
+        account. Without this, upgrading would silently orphan a trained model
+        — the app would quietly fall back to heuristics and the quality history
+        would read as empty, which looks exactly like a bug.
+
+        Plain file moves, no ``app.learning`` import: this runs on the core
+        registration path and must not drag joblib in behind it.
+        """
+        from pathlib import Path
+
+        from app.core.config import get_settings
+
+        root = Path(get_settings().data_dir) / "models"
+        legacy_index = root / "registry.json"
+        destination = root / user.id
+        if not legacy_index.exists() or (destination / "registry.json").exists():
+            return 0
+
+        destination.mkdir(parents=True, exist_ok=True)
+        moved = 0
+        for path in [*sorted(root.glob("*.joblib")), legacy_index]:
+            path.replace(destination / path.name)
+            moved += 1
+        log.info("auth.models_adopted", extra={"username": user.username, "files": moved})
+        return moved
 
     # ------------------------------------------------------------------- login
     def authenticate(self, identifier: str, password: str) -> User:

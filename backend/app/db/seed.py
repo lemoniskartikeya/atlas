@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import delete
 
 from app.core.database import SessionLocal, engine
+from app.core.scoping import acting_as
 from app.domain.enums import (
     Difficulty,
     Frequency,
@@ -27,6 +28,7 @@ from app.models.base import Base
 from app.models.habit import Habit, HabitLog
 from app.models.journal import JournalEntry
 from app.models.task import Project, Task
+from app.services.auth_service import AuthService
 
 RNG = random.Random(42)
 DAYS = 45
@@ -173,42 +175,64 @@ def _seed_journal(session, today: date) -> int:
     return count
 
 
-def _wipe(session) -> None:
+def _wipe(session, user_id: str) -> None:
     for model in (HabitLog, Habit, Task, Project, JournalEntry):
-        session.execute(delete(model))
+        session.execute(delete(model).where(model.user_id == user_id))
     session.commit()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed Atlas with demo data")
     parser.add_argument("--force", action="store_true", help="wipe existing data first")
+    parser.add_argument(
+        "--user",
+        help="username to seed into (default: the first account created)",
+    )
     args = parser.parse_args()
 
     Base.metadata.create_all(bind=engine)
     session = SessionLocal()
     try:
-        existing = session.query(Habit).count()
-        if existing and not args.force:
-            print(f"Already seeded ({existing} habits present). Use --force to reset.")
-            return
-        if args.force:
-            _wipe(session)
+        auth = AuthService(session)
+        user = auth.by_username(args.user) if args.user else auth.first_user()
+        if user is None:
+            print(
+                "No account to seed into. Register one in the app first"
+                if not args.user
+                else f"No account named {args.user!r}."
+            )
+            raise SystemExit(1)
 
-        today = date.today()
-        for spec in _HABIT_SPECS:
-            habit = _make_habit(spec)
-            _seed_logs(habit, spec, today)
-            session.add(habit)
+        # Everything below is written as this account, so the demo data lands
+        # in exactly the vault the signed-in user will be looking at.
+        with acting_as(session, user.id):
+            existing = (
+                session.query(Habit).filter(Habit.user_id == user.id).count()
+            )
+            if existing and not args.force:
+                print(
+                    f"Already seeded ({existing} habits present for {user.username}). "
+                    "Use --force to reset."
+                )
+                return
+            if args.force:
+                _wipe(session, user.id)
 
-        n_tasks = _seed_tasks(session, today)
-        n_journal = _seed_journal(session, today)
-        session.commit()
+            today = date.today()
+            for spec in _HABIT_SPECS:
+                habit = _make_habit(spec)
+                _seed_logs(habit, spec, today)
+                session.add(habit)
 
-        n_logs = session.query(HabitLog).count()
-        print(
-            f"Seeded {len(_HABIT_SPECS)} habits, {n_logs} habit logs, "
-            f"{n_tasks} tasks, {n_journal} journal entries."
-        )
+            n_tasks = _seed_tasks(session, today)
+            n_journal = _seed_journal(session, today)
+            session.commit()
+
+            n_logs = session.query(HabitLog).filter(HabitLog.user_id == user.id).count()
+            print(
+                f"Seeded {len(_HABIT_SPECS)} habits, {n_logs} habit logs, "
+                f"{n_tasks} tasks, {n_journal} journal entries for {user.username}."
+            )
     finally:
         session.close()
 

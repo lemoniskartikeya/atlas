@@ -116,11 +116,11 @@ def test_login_failure_does_not_reveal_whether_user_exists(client):
 
 
 # ------------------------------------------------------------------ sessions
-def test_me_requires_a_valid_token(client):
-    token = _register(client).json()["token"]
-    assert client.get("/api/v1/auth/me", headers=_auth(token)).status_code == 200
-    assert client.get("/api/v1/auth/me").status_code == 401
-    assert client.get("/api/v1/auth/me", headers=_auth("bogus")).status_code == 401
+def test_me_requires_a_valid_token(anon_client):
+    token = _register(anon_client).json()["token"]
+    assert anon_client.get("/api/v1/auth/me", headers=_auth(token)).status_code == 200
+    assert anon_client.get("/api/v1/auth/me").status_code == 401
+    assert anon_client.get("/api/v1/auth/me", headers=_auth("bogus")).status_code == 401
 
 
 def test_logout_revokes_the_token(client):
@@ -129,13 +129,13 @@ def test_logout_revokes_the_token(client):
     assert client.get("/api/v1/auth/me", headers=_auth(token)).status_code == 401
 
 
-def test_status_drives_first_run_setup(client):
-    before = client.get("/api/v1/auth/status").json()
+def test_status_drives_first_run_setup(anon_client):
+    before = anon_client.get("/api/v1/auth/status").json()
     assert before["has_accounts"] is False and before["authenticated"] is False
     assert before["policy"]["min_length"] == 8
 
-    token = _register(client).json()["token"]
-    after = client.get("/api/v1/auth/status", headers=_auth(token)).json()
+    token = _register(anon_client).json()["token"]
+    after = anon_client.get("/api/v1/auth/status", headers=_auth(token)).json()
     assert after["has_accounts"] is True and after["authenticated"] is True
     assert after["user"]["username"] == "kartikeya"
 

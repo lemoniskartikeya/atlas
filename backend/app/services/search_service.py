@@ -17,6 +17,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.scoping import current_user_id
 from app.domain.enums import OPEN_TASK_STATUSES, TaskStatus
 from app.models.note import Note
 from app.core.timeutil import local_day
@@ -333,7 +334,9 @@ class SearchService:
         if not p.keywords:
             return []
         out: list[SearchResult] = []
-        for n in self.session.scalars(select(Note)):
+        for n in self.session.scalars(
+            select(Note).where(Note.user_id == current_user_id(self.session))
+        ):
             hay = f"{n.title} {n.content}"
             if not _matches(p.keywords, hay):
                 continue

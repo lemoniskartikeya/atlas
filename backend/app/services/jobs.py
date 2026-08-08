@@ -9,6 +9,11 @@ next launch instead of never.
 
 Jobs are expected to be *idempotent* and to decide for themselves whether there
 is anything worth doing; returning "skipped" is a successful outcome.
+
+Everything here runs **per account**. Each account has its own model, its own
+snapshots, and its own ``job_runs`` history — so a schedule is never shared, and
+one account being idle can't push out another's retrain. The scheduler walks
+every account on each tick via ``acting_as``.
 """
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.scoping import acting_as, current_user_id
 from app.models.job import JobRun
 
 log = get_logger("atlas.jobs")
@@ -66,9 +72,17 @@ def retrain_model(session: Session) -> JobResult:
 
     from app.models.habit import HabitLog
 
-    rows = session.scalar(select(func.count()).select_from(HabitLog)) or 0
+    user_id = current_user_id(session)
+    rows = (
+        session.scalar(
+            select(func.count())
+            .select_from(HabitLog)
+            .where(HabitLog.user_id == user_id)
+        )
+        or 0
+    )
 
-    meta = registry.latest_meta()
+    meta = registry.latest_meta(user_id)
     if meta:
         trained_on = int((meta.get("metrics") or {}).get("n_rows") or 0)
         new_rows = rows - trained_on
@@ -110,7 +124,9 @@ def auto_backup(session: Session) -> JobResult:
     from app.services.backup_service import BackupService
 
     settings = get_settings()
-    folder = Path(settings.data_dir) / "backups"
+    # One folder per account: a shared folder would have each account's daily
+    # snapshot overwrite the last one to run, silently leaving only one of them.
+    folder = Path(settings.data_dir) / "backups" / current_user_id(session)
     folder.mkdir(parents=True, exist_ok=True)
 
     doc = BackupService(session).export()
@@ -163,10 +179,18 @@ class JobRunner:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    @property
+    def user_id(self) -> str:
+        return current_user_id(self.session)
+
     def last_run(self, job_id: str) -> Optional[JobRun]:
         return self.session.scalars(
             select(JobRun)
-            .where(JobRun.job_id == job_id, JobRun.status != "error")
+            .where(
+                JobRun.user_id == self.user_id,
+                JobRun.job_id == job_id,
+                JobRun.status != "error",
+            )
             .order_by(JobRun.started_at.desc())
             .limit(1)
         ).first()
@@ -174,7 +198,10 @@ class JobRunner:
     def history(self, limit: int = 20) -> list[JobRun]:
         return list(
             self.session.scalars(
-                select(JobRun).order_by(JobRun.started_at.desc()).limit(limit)
+                select(JobRun)
+                .where(JobRun.user_id == self.user_id)
+                .order_by(JobRun.started_at.desc())
+                .limit(limit)
             )
         )
 
@@ -230,6 +257,32 @@ class JobRunner:
         return [self.run(job) for job in JOBS if self.due(job, now)]
 
 
+def run_due_for_all(session: Session) -> dict[str, list[JobRun]]:
+    """Run whatever is due, for every account in turn.
+
+    The scheduler is the one place with no signed-in user to inherit an
+    identity from, so it supplies one explicitly per account. A failure for one
+    account is logged and skipped rather than abandoning the rest of the tick.
+    """
+    from app.services.auth_service import AuthService
+
+    out: dict[str, list[JobRun]] = {}
+    for user in AuthService(session).all_users():
+        try:
+            with acting_as(session, user.id):
+                ran = JobRunner(session).run_due()
+        except Exception as exc:  # one account's problem is not the others'
+            log.warning(
+                "jobs.account_failed",
+                extra={"account": user.username, "error": str(exc)},
+            )
+            session.rollback()
+            continue
+        if ran:
+            out[user.username] = ran
+    return out
+
+
 async def scheduler_loop(session_factory) -> None:
     """Tick forever, running whatever is due. Cancelled on app shutdown."""
     # A short delay keeps startup snappy and avoids competing with the first
@@ -239,9 +292,16 @@ async def scheduler_loop(session_factory) -> None:
         try:
             session = session_factory()
             try:
-                ran = JobRunner(session).run_due()
+                ran = run_due_for_all(session)
                 if ran:
-                    log.info("jobs.tick", extra={"ran": [r.job_id for r in ran]})
+                    log.info(
+                        "jobs.tick",
+                        extra={
+                            "ran": {
+                                who: [r.job_id for r in runs] for who, runs in ran.items()
+                            }
+                        },
+                    )
             finally:
                 session.close()
         except asyncio.CancelledError:

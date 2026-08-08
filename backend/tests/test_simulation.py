@@ -55,7 +55,7 @@ def test_min_rate_does_not_lower_an_already_high_rate():
 # ------------------------------------------------------------- no-model path
 
 def test_simulator_without_model_is_unavailable(client, monkeypatch):
-    monkeypatch.setattr("app.learning.registry.latest_meta", lambda: None)
+    monkeypatch.setattr("app.learning.registry.latest_meta", lambda _uid: None)
     r = client.post(f"{BASE}/simulator", json={"sleep_prev": 8.0}).json()
     assert r["available"] is False
     assert r["rows"] == []
@@ -85,8 +85,8 @@ def test_simulator_scores_counterfactual(client, monkeypatch):
         "importances": [],
         "version": "test",
     }
-    monkeypatch.setattr("app.learning.registry.latest_meta", lambda: {"version": "test"})
-    monkeypatch.setattr("app.learning.registry.latest_bundle", lambda: bundle)
+    monkeypatch.setattr("app.learning.registry.latest_meta", lambda _uid: {"version": "test"})
+    monkeypatch.setattr("app.learning.registry.latest_bundle", lambda _uid: bundle)
 
     r = client.post(f"{BASE}/simulator", json={"sleep_prev": 8.0}).json()
 
@@ -113,8 +113,8 @@ def test_time_of_day_lever_is_human_readable(client, monkeypatch):
         "importances": [],
         "version": "test",
     }
-    monkeypatch.setattr("app.learning.registry.latest_meta", lambda: {"version": "test"})
-    monkeypatch.setattr("app.learning.registry.latest_bundle", lambda: bundle)
+    monkeypatch.setattr("app.learning.registry.latest_meta", lambda _uid: {"version": "test"})
+    monkeypatch.setattr("app.learning.registry.latest_bundle", lambda _uid: bundle)
 
     r = client.post(f"{BASE}/simulator", json={"time_of_day": "evening"}).json()
     joined = " ".join(r["levers"])

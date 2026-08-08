@@ -11,6 +11,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.scoping import current_user_id
 from app.learning import features, registry, simulate
 from app.learning.model import train_model
 
@@ -60,8 +61,13 @@ class MLService:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    @property
+    def user_id(self) -> str:
+        """Whose model this is. Every registry call is keyed by it."""
+        return current_user_id(self.session)
+
     def status(self) -> dict:
-        meta = registry.latest_meta()
+        meta = registry.latest_meta(self.user_id)
         if not meta:
             return {"trained": False}
         return {
@@ -90,6 +96,7 @@ class MLService:
         # chart uses it to show quality against data volume.
         metrics = {**result.metrics, "n_rows": self._log_count(), "n_samples": n}
         meta = registry.save(
+            self.user_id,
             result.model,
             result.feature_names,
             result.kept_indices,
@@ -104,10 +111,17 @@ class MLService:
 
         from app.models.habit import HabitLog
 
-        return int(self.session.scalar(select(func.count()).select_from(HabitLog)) or 0)
+        return int(
+            self.session.scalar(
+                select(func.count())
+                .select_from(HabitLog)
+                .where(HabitLog.user_id == current_user_id(self.session))
+            )
+            or 0
+        )
 
     def predict_today(self, today: Optional[date] = None) -> dict:
-        bundle = registry.latest_bundle()
+        bundle = registry.latest_bundle(self.user_id)
         if not bundle:
             return {"trained": False, "predictions": []}
         model = bundle["model"]
@@ -151,7 +165,7 @@ class MLService:
         levers (features the model dropped as uninformative) simply show no
         effect — which is itself honest.
         """
-        bundle = registry.latest_bundle()
+        bundle = registry.latest_bundle(self.user_id)
         if not bundle:
             return {"available": False}
         model = bundle["model"]

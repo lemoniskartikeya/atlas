@@ -12,6 +12,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.scoping import current_user_id
+
 
 def habit_predictions(
     session: Session, today: Optional[date] = None
@@ -32,7 +34,7 @@ def habit_predictions(
         from app.learning import registry
     except Exception:  # pragma: no cover - optional dependency missing
         return None, None
-    if not registry.latest_meta():
+    if not registry.latest_meta(current_user_id(session)):
         return None, None
 
     try:
@@ -59,7 +61,7 @@ def simulate(session: Session, overrides: dict, today: Optional[date] = None) ->
         from app.learning import registry
     except Exception:  # pragma: no cover - optional dependency missing
         return None
-    if not registry.latest_meta():
+    if not registry.latest_meta(current_user_id(session)):
         return None
     try:
         from app.services.ml_service import MLService
@@ -71,8 +73,8 @@ def simulate(session: Session, overrides: dict, today: Optional[date] = None) ->
         return None
 
 
-def model_history() -> list[dict]:
-    """Every trained model version, oldest first — quality over time.
+def model_history(user_id: str) -> list[dict]:
+    """One account's trained model versions, oldest first — quality over time.
 
     Reads the registry's JSON index directly instead of going through
     ``app.learning.registry``, which imports joblib. That keeps training history
@@ -85,7 +87,7 @@ def model_history() -> list[dict]:
 
     from app.core.config import get_settings
 
-    path = Path(get_settings().data_dir) / "models" / "registry.json"
+    path = Path(get_settings().data_dir) / "models" / user_id / "registry.json"
     if not path.exists():
         return []
     try:

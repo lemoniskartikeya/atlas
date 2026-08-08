@@ -4,14 +4,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.database import get_session
+from app.api.deps import scoped_session
 from app.schemas.ml import MLStatus, PredictionsResponse, TrainOutcome
 from app.services.ml_service import MLService
 
 router = APIRouter(prefix="/ml", tags=["ml"])
 
 
-def _service(session: Session = Depends(get_session)) -> MLService:
+def _service(session: Session = Depends(scoped_session)) -> MLService:
     return MLService(session)
 
 

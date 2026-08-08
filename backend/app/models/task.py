@@ -22,10 +22,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.enums import Priority, TaskStatus
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin
 
 
-class Project(UUIDMixin, TimestampMixin, Base):
+class Project(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "projects"
 
     name: Mapped[str] = mapped_column(String(160))
@@ -36,7 +36,7 @@ class Project(UUIDMixin, TimestampMixin, Base):
     tasks: Mapped[list["Task"]] = relationship(back_populates="project")
 
 
-class Task(UUIDMixin, TimestampMixin, Base):
+class Task(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "tasks"
 
     title: Mapped[str] = mapped_column(String(300))

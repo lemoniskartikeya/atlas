@@ -19,6 +19,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.scoping import current_user_id
 from app.core.timeutil import local_day
 from app.domain.enums import Frequency, HabitLogStatus, SUCCESS_STATUSES, TaskStatus
 from app.models.focus import FocusSession
@@ -81,7 +82,11 @@ class CalendarService:
 
         # --- focus ----------------------------------------------------------
         focus_by_day: dict[date, list[FocusSession]] = {}
-        for fs in self.session.scalars(select(FocusSession)):
+        for fs in self.session.scalars(
+            select(FocusSession).where(
+                FocusSession.user_id == current_user_id(self.session)
+            )
+        ):
             day = local_day(fs.started_at, start)
             if start <= day <= end:
                 focus_by_day.setdefault(day, []).append(fs)

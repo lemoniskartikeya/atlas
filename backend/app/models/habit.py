@@ -20,10 +20,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.enums import Difficulty, Frequency, HabitLogStatus, Priority, TimeOfDay
-from app.models.base import Base, TimestampMixin, UUIDMixin, utcnow
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin, utcnow
 
 
-class Habit(UUIDMixin, TimestampMixin, Base):
+class Habit(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "habits"
 
     title: Mapped[str] = mapped_column(String(200))
@@ -62,7 +62,7 @@ class Habit(UUIDMixin, TimestampMixin, Base):
     )
 
 
-class HabitLog(UUIDMixin, TimestampMixin, Base):
+class HabitLog(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "habit_logs"
     __table_args__ = (Index("ix_habit_logs_habit_date", "habit_id", "date"),)
 

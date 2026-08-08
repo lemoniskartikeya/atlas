@@ -15,26 +15,30 @@ class JournalRepository(BaseRepository[JournalEntry]):
 
     def by_date(self, d: date) -> Optional[JournalEntry]:
         return self.session.scalars(
-            select(JournalEntry).where(JournalEntry.date == d)
+            self.scoped(select(JournalEntry).where(JournalEntry.date == d))
         ).first()
 
     def recent(self, limit: int = 14) -> Sequence[JournalEntry]:
         return list(
             self.session.scalars(
-                select(JournalEntry).order_by(JournalEntry.date.desc()).limit(limit)
+                self.scoped(
+                    select(JournalEntry).order_by(JournalEntry.date.desc()).limit(limit)
+                )
             )
         )
 
     def latest(self) -> Optional[JournalEntry]:
         return self.session.scalars(
-            select(JournalEntry).order_by(JournalEntry.date.desc())
+            self.scoped(select(JournalEntry).order_by(JournalEntry.date.desc()))
         ).first()
 
     def in_range(self, start: date, end: date) -> Sequence[JournalEntry]:
         return list(
             self.session.scalars(
-                select(JournalEntry)
-                .where(JournalEntry.date >= start, JournalEntry.date <= end)
-                .order_by(JournalEntry.date)
+                self.scoped(
+                    select(JournalEntry)
+                    .where(JournalEntry.date >= start, JournalEntry.date <= end)
+                    .order_by(JournalEntry.date)
+                )
             )
         )

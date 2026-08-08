@@ -7,10 +7,10 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin, utcnow
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin, utcnow
 
 
-class FocusSession(UUIDMixin, TimestampMixin, Base):
+class FocusSession(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "focus_sessions"
 
     started_at: Mapped[datetime] = mapped_column(

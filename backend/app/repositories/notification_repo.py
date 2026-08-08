@@ -16,6 +16,16 @@ class NotificationRepository(BaseRepository[NotificationState]):
         """All stored states as ``{notification_id: status}``."""
         return {s.notification_id: s.status for s in self.list()}
 
+    def by_notification(self, notification_id: str) -> Optional[NotificationState]:
+        """Look up one stored state. Identity is (account, notification)."""
+        return self.session.scalars(
+            self.scoped(
+                select(NotificationState).where(
+                    NotificationState.notification_id == notification_id
+                )
+            )
+        ).first()
+
     def set_status(
         self,
         notification_id: str,
@@ -23,7 +33,7 @@ class NotificationRepository(BaseRepository[NotificationState]):
         kind: Optional[str] = None,
         target: Optional[str] = None,
     ) -> NotificationState:
-        row = self.get(notification_id)
+        row = self.by_notification(notification_id)
         if row is None:
             row = NotificationState(
                 notification_id=notification_id, status=status, kind=kind, target=target
@@ -47,13 +57,19 @@ class NotificationRepository(BaseRepository[NotificationState]):
             else NotificationState.target.is_(None)
         )
         return list(
-            self.session.scalars(stmt.order_by(NotificationState.created_at.desc()))
+            self.session.scalars(
+                self.scoped(stmt.order_by(NotificationState.created_at.desc()))
+            )
         )
 
     def all_states(self) -> Sequence[NotificationState]:
         return list(
             self.session.scalars(
-                select(NotificationState).order_by(NotificationState.created_at.desc())
+                self.scoped(
+                    select(NotificationState).order_by(
+                        NotificationState.created_at.desc()
+                    )
+                )
             )
         )
 

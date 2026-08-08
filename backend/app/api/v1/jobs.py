@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.database import get_session
+from app.api.deps import scoped_session
 from app.schemas.jobs import JobOut, JobRunOut, JobsResponse
 from app.services.jobs import JOBS, JOBS_BY_ID, JobRunner
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
-def _runner(session: Session = Depends(get_session)) -> JobRunner:
+def _runner(session: Session = Depends(scoped_session)) -> JobRunner:
     return JobRunner(session)
 
 

@@ -4,9 +4,8 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.core.database import get_session
+from app.api.deps import _bearer, auth_service, current_user, optional_user
 from app.core.security import PASSWORD_MIN_LENGTH
 from app.models.user import User
 from app.schemas.auth import (
@@ -29,32 +28,6 @@ POLICY = PasswordPolicy(
         "a number, and a special character."
     ),
 )
-
-
-def auth_service(session: Session = Depends(get_session)) -> AuthService:
-    return AuthService(session)
-
-
-def _bearer(authorization: Optional[str]) -> Optional[str]:
-    if not authorization:
-        return None
-    scheme, _, token = authorization.partition(" ")
-    return token.strip() if scheme.lower() == "bearer" and token.strip() else None
-
-
-def optional_user(
-    authorization: Optional[str] = Header(default=None),
-    svc: AuthService = Depends(auth_service),
-) -> Optional[User]:
-    token = _bearer(authorization)
-    return svc.resolve(token) if token else None
-
-
-def current_user(user: Optional[User] = Depends(optional_user)) -> User:
-    """Require a signed-in account. Use on anything account-scoped."""
-    if user is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Sign in to continue.")
-    return user
 
 
 @router.get("/status", response_model=AuthStatus)

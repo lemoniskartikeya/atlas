@@ -13,15 +13,18 @@ from typing import Optional
 from sqlalchemy import Boolean, Date, DateTime, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin
 
 
-class RecommendationOutcome(UUIDMixin, TimestampMixin, Base):
+class RecommendationOutcome(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "recommendation_outcomes"
-    # One row per recommendation per day: the dashboard is rebuilt on every
-    # load, so recording has to be idempotent.
+    # One row per recommendation per day *per account*: the dashboard is
+    # rebuilt on every load, so recording has to be idempotent — but two
+    # accounts shown the same nudge on the same day are two separate facts.
     __table_args__ = (
-        UniqueConstraint("rec_id", "shown_on", name="uq_recommendation_shown_once_per_day"),
+        UniqueConstraint(
+            "user_id", "rec_id", "shown_on", name="uq_recommendation_shown_once_per_day"
+        ),
     )
 
     rec_id: Mapped[str] = mapped_column(String(120), index=True)

@@ -14,16 +14,24 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import String
+from sqlalchemy import String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.models.base import Base, OwnedMixin, TimestampMixin, UUIDMixin
 
 
-class NotificationState(TimestampMixin, Base):
+class NotificationState(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     __tablename__ = "notification_states"
+    # The notification id used to be the primary key. It can't be any more:
+    # two accounts legitimately produce the same deterministic id on the same
+    # day, so identity is now (account, notification).
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "notification_id", name="uq_notification_state_user_notification"
+        ),
+    )
 
-    notification_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    notification_id: Mapped[str] = mapped_column(String(160), index=True)
     status: Mapped[str] = mapped_column(String(16))  # "read" | "dismissed"
     #: Notification family, e.g. "streak" | "risk" | "task" | "brief" | "eod".
     kind: Mapped[Optional[str]] = mapped_column(String(32), default=None, index=True)

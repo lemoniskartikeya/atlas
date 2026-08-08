@@ -34,13 +34,33 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     with engine.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            render_as_batch=True,
-        )
-        with context.begin_transaction():
-            context.run_migrations()
+        sqlite = connection.dialect.name == "sqlite"
+        if sqlite:
+            # SQLite cannot ALTER most things, so Alembic's batch mode rebuilds
+            # a table as create-new / copy / DROP old / rename. With foreign
+            # keys enforced (the app's connect hook turns them on), that DROP
+            # cascades: rebuilding `habits` silently deleted every `habit_log`.
+            # Enforcement is off only for the duration of the migration, and
+            # the pragma must be the first statement on the connection because
+            # SQLite ignores it inside a transaction.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            # Any execute autobegins a transaction, and Alembic will not start
+            # its own on top of one already open — leaving its version bump
+            # uncommitted while the DDL (which SQLite commits implicitly) went
+            # through. Close it here so the stamp lands with the schema.
+            connection.commit()
+        try:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                render_as_batch=True,
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            if sqlite:
+                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+                connection.commit()
 
 
 if context.is_offline_mode():
