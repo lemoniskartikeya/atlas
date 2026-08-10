@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import Optional, Sequence
 
 from sqlalchemy.orm import Session
 
 from app.core.timeutil import local_day
+from app.models.base import utcnow
 from app.models.focus import FocusSession
 from app.repositories.focus_repo import FocusRepository
 from app.schemas.focus import FocusSessionCreate
@@ -31,7 +32,7 @@ class FocusService:
 
     def create(self, data: FocusSessionCreate) -> FocusSession:
         payload = data.model_dump(exclude_unset=True)
-        payload.setdefault("started_at", datetime.now(timezone.utc))
+        payload.setdefault("started_at", utcnow())
         fs = FocusSession(**payload)
         self.repo.add(fs)
         self.repo.commit()

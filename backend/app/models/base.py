@@ -1,6 +1,7 @@
 """Declarative base and shared column mixins."""
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,8 +14,47 @@ def new_uuid() -> str:
     return uuid.uuid4().hex
 
 
+def _make_utcnow():
+    """Pick the most precise UTC clock this platform offers.
+
+    On Windows, `datetime.now()` reads `GetSystemTimeAsFileTime`, whose
+    resolution is **15.625 ms**. Two rows written inside one tick get byte-identical
+    timestamps, so any "most recent first" ordering falls back to whatever order
+    the database happens to return — the focus-session list showed a just-logged
+    session *below* the one before it. The precise API is sub-microsecond, which
+    is enough to keep consecutive writes distinguishable.
+    """
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        try:
+            get_time = ctypes.windll.kernel32.GetSystemTimePreciseAsFileTime
+        except (AttributeError, OSError):  # pragma: no cover - pre-Windows 8
+            return lambda: datetime.now(timezone.utc)
+        get_time.restype = None
+        get_time.argtypes = [ctypes.POINTER(wintypes.FILETIME)]
+
+        # FILETIME counts 100-nanosecond intervals since 1601-01-01 UTC.
+        epoch_offset = 116_444_736_000_000_000  # 1601-01-01 -> 1970-01-01
+
+        def _precise_now() -> datetime:
+            filetime = wintypes.FILETIME()
+            get_time(ctypes.byref(filetime))
+            ticks = (filetime.dwHighDateTime << 32) | filetime.dwLowDateTime
+            return datetime.fromtimestamp((ticks - epoch_offset) / 1e7, tz=timezone.utc)
+
+        return _precise_now
+
+    return lambda: datetime.now(timezone.utc)
+
+
+_utcnow = _make_utcnow()
+
+
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    """Current UTC time, at the finest resolution the platform can give us."""
+    return _utcnow()
 
 
 class Base(DeclarativeBase):

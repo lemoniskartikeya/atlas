@@ -53,6 +53,29 @@ def test_focus_appears_in_timeline(client):
 # IST on the previous day, so the focus stats silently reset to zero for the
 # rest of the evening.
 
+def test_back_to_back_sessions_get_distinct_timestamps():
+    """`datetime.now()` on Windows ticks every 15.625 ms.
+
+    Two sessions logged inside one tick used to get byte-identical `started_at`
+    values, leaving "most recent first" up to the database's row order — the
+    newly logged session appeared *below* the previous one.
+    """
+    from app.models.base import utcnow
+
+    stamps = [utcnow() for _ in range(50)]
+    assert len(set(stamps)) > 1, "clock is too coarse to order same-tick writes"
+    assert all(b >= a for a, b in zip(stamps, stamps[1:])), "clock went backwards"
+
+
+def test_sessions_logged_in_the_same_tick_stay_newest_first(client):
+    """The user-visible symptom, reproduced without any artificial delay."""
+    for minutes in (15, 25, 50):
+        _log_focus(client, minutes)
+
+    listed = client.get(f"{BASE}/focus/sessions").json()
+    assert [s["duration_min"] for s in listed] == [50, 25, 15]
+
+
 def test_local_day_treats_naive_timestamps_as_utc():
     """SQLite returns naive datetimes; they must not be read as local time."""
     from datetime import datetime, timezone

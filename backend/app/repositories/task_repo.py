@@ -17,7 +17,9 @@ class TaskRepository(BaseRepository[Task]):
     def list_all(self) -> Sequence[Task]:
         return list(
             self.session.scalars(
-                self.scoped(select(Task).order_by(Task.created_at.desc()))
+                self.scoped(
+                    select(Task).order_by(Task.created_at.desc(), Task.id.desc())
+                )
             )
         )
 
@@ -40,7 +42,7 @@ class TaskRepository(BaseRepository[Task]):
                 self.scoped(
                     select(Task)
                     .where(Task.status == TaskStatus.DONE, Task.completed_at.is_not(None))
-                    .order_by(Task.completed_at.desc())
+                    .order_by(Task.completed_at.desc(), Task.id.desc())
                     .limit(limit)
                 )
             )
