@@ -37,6 +37,12 @@ def _alembic_config(url: str):
     # actually using (which may come from an env override).
     cfg.set_main_option("script_location", str(RESOURCE_DIR / "app" / "migrations"))
     cfg.set_main_option("sqlalchemy.url", url)
+    # We are inside the running app, which configured logging at import. Read by
+    # env.py: without this, Alembic's fileConfig would replace the root handler
+    # and disable every logger the .ini does not name — muting the backend for
+    # the rest of the process. Alembic's own logs still reach our JSON handler,
+    # since they propagate to root like anything else.
+    cfg.attributes["configure_logger"] = False
     return cfg
 
 

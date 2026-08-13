@@ -55,3 +55,17 @@ migration against a throwaway DB (e.g. to regenerate the baseline from empty):
 ```bash
 ATLAS_DATABASE_URL="sqlite:///./scratch.db" alembic upgrade head
 ```
+
+## Logging (env.py runs inside the app)
+
+Migrations run in-process on every startup (`app/core/schema.py`), so `env.py`
+must not touch the logging the app already configured. `logging.config.fileConfig`
+replaces the root handler *and disables every logger this `.ini` does not name* —
+which is all of `uvicorn.*` and `atlas.*`. That muted the packaged backend a few
+seconds into every launch, and the desktop log lost everything after boot.
+
+So `env.py` only configures logging when Alembic's `configure_logger` attribute
+is left at its default, and passes `disable_existing_loggers=False` regardless.
+`schema.py` sets `cfg.attributes["configure_logger"] = False` for the in-process
+path; the `alembic` CLI still gets the console formatting from this `.ini`.
+`tests/test_schema.py` fails if either half regresses.

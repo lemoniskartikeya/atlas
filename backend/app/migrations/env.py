@@ -11,9 +11,16 @@ from app.core.database import engine
 from app.models.base import Base
 
 config = context.config
-if config.config_file_name is not None:
+# Only the `alembic` CLI gets to configure logging. The app runs migrations
+# in-process at startup (core/schema.py) and owns its own logging: fileConfig
+# replaces the root handler and, worse, DISABLES every logger the .ini does not
+# name — which is every uvicorn.* and atlas.* logger. That silenced the packaged
+# backend a few seconds into every launch, so nothing after startup was ever
+# recorded. `configure_logger` is Alembic's own escape hatch for programmatic
+# use; disable_existing_loggers=False keeps even the CLI path from doing it.
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     try:
-        fileConfig(config.config_file_name)
+        fileConfig(config.config_file_name, disable_existing_loggers=False)
     except Exception:  # pragma: no cover - logging config is best-effort
         pass
 
