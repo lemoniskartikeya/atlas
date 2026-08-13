@@ -8,6 +8,7 @@ from app.schemas.analytics import (
     AnalyticsSummary,
     CorrelationsResponse,
     HeatmapResponse,
+    InsightsResponse,
     WeeklyResponse,
 )
 from app.services.analytics_service import AnalyticsService
@@ -34,6 +35,19 @@ def weekly(
     svc: AnalyticsService = Depends(analytics_service),
 ):
     return svc.weekly(weeks)
+
+
+@router.get("/insights", response_model=InsightsResponse)
+def insights(
+    days: int = Query(365, ge=28, le=730),
+    svc: AnalyticsService = Depends(analytics_service),
+):
+    """Plain-language readings of the same data the other endpoints chart.
+
+    Returns an empty list when nothing meets its evidence threshold — that is
+    the expected answer for a new account, not an error.
+    """
+    return svc.insights(days)
 
 
 @router.get("/correlations", response_model=CorrelationsResponse)

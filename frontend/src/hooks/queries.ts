@@ -178,6 +178,13 @@ export function useAnalyticsCorrelations(days = 90) {
   });
 }
 
+export function useAnalyticsInsights(days = 365) {
+  return useQuery({
+    queryKey: ["analytics", "insights", days],
+    queryFn: () => api.analyticsInsights(days),
+  });
+}
+
 export function usePlan() {
   return useQuery({ queryKey: ["plan"], queryFn: api.plan });
 }

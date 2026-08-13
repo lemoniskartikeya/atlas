@@ -420,6 +420,21 @@ export interface CorrelationsResponse {
   pairs: CorrelationPair[];
 }
 
+export interface Insight {
+  key: string;
+  text: string;
+  /** The arithmetic behind the sentence — always present. */
+  evidence: string;
+  tone: "good" | "watch" | "neutral";
+}
+
+export interface InsightsResponse {
+  generated_for: string;
+  days: number;
+  /** Empty until there is enough history to say something true. */
+  insights: Insight[];
+}
+
 export interface MLMetrics {
   accuracy?: number | null;
   roc_auc?: number | null;

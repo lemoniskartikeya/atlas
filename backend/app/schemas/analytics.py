@@ -82,3 +82,20 @@ class CorrelationPair(BaseModel):
 
 class CorrelationsResponse(BaseModel):
     pairs: list[CorrelationPair]
+
+
+class InsightOut(BaseModel):
+    key: str
+    text: str
+    #: The arithmetic behind the sentence, shown alongside it. Always populated —
+    #: a claim the user cannot check is not one this app makes.
+    evidence: str
+    tone: str  # "good" | "watch" | "neutral"
+
+
+class InsightsResponse(BaseModel):
+    generated_for: date
+    days: int
+    #: Empty whenever the data does not support a claim, which is the normal
+    #: state of a new account. The page renders nothing rather than filler.
+    insights: list[InsightOut]

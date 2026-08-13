@@ -15,6 +15,7 @@ import type {
   ObsidianSyncResult,
   ObsidianVaultCheck,
   CorrelationsResponse,
+  InsightsResponse,
   Dashboard,
   FocusSession,
   FocusSessionCreate,
@@ -186,6 +187,8 @@ export const api = {
   analyticsWeekly: (weeks = 12) => http<WeeklyResponse>(`/analytics/weekly?weeks=${weeks}`),
   analyticsCorrelations: (days = 90) =>
     http<CorrelationsResponse>(`/analytics/correlations?days=${days}`),
+  analyticsInsights: (days = 365) =>
+    http<InsightsResponse>(`/analytics/insights?days=${days}`),
 
   mlStatus: () => http<MLStatus>("/ml/status"),
   mlPredictions: () => http<PredictionsResponse>("/ml/predictions"),

@@ -23,11 +23,13 @@ from app.schemas.analytics import (
     CorrelationsResponse,
     HeatmapCell,
     HeatmapResponse,
+    InsightOut,
+    InsightsResponse,
     TopHabit,
     WeeklyPoint,
     WeeklyResponse,
 )
-from app.services import streaks
+from app.services import insights, streaks
 from app.services.habit_service import HabitService
 
 
@@ -239,6 +241,75 @@ class AnalyticsService:
             for b in buckets.values()
         ]
         return WeeklyResponse(weeks=points[-weeks:])
+
+    # -------------------------------------------------------------- insights
+    def insights(self, days: int = 365, today: Optional[date] = None) -> InsightsResponse:
+        """What the charts on this page would say if they could talk.
+
+        Everything comes from one pass over the daily frame plus the summary
+        that was computed for the page anyway, so this adds a walk over the
+        rows rather than another walk over the logs.
+        """
+        today = today or date.today()
+        rows = self._daily_rows(days, today)
+
+        # (done, due) per weekday, Monday first.
+        weekday: list[list[int]] = [[0, 0] for _ in range(7)]
+        for r in rows:
+            i = r["date"].weekday()
+            weekday[i][0] += r["done"]
+            weekday[i][1] += r["due"]
+
+        # Four weeks against the four before them, from the tail of the frame.
+        window = 28
+        recent_rows = rows[-window:]
+        previous_rows = rows[-2 * window : -window]
+        recent = (sum(r["done"] for r in recent_rows), sum(r["due"] for r in recent_rows))
+        previous = (sum(r["done"] for r in previous_rows), sum(r["due"] for r in previous_rows))
+
+        # The same correlations the cards below show, without the point clouds.
+        drivers: list[tuple[str, Optional[float], int]] = []
+        for key, label in (("sleep", "Sleep"), ("mood", "Mood"), ("energy", "Energy")):
+            pts = [
+                (float(r[key]), r["rate"])
+                for r in rows[-90:]
+                if r[key] is not None and r["rate"] is not None
+            ]
+            drivers.append(
+                (label, pearson([p[0] for p in pts], [p[1] for p in pts]), len(pts))
+            )
+
+        summary = self.summary(today)
+        habits = [
+            insights.HabitRow(
+                title=h.title,
+                success_rate=h.success_rate,
+                consistency_30d=h.consistency_30d,
+                total_completions=h.total_completions,
+                current_streak=h.current_streak,
+            )
+            for h in summary.top_habits
+        ]
+
+        found = insights.rank(
+            [
+                insights.trend(recent, previous, window),
+                insights.slipping_habit(habits),
+                insights.weekday_edge([(w[0], w[1]) for w in weekday]),
+                insights.strongest_driver(drivers),
+                insights.anchor_habit(habits),
+                insights.category_focus([(c.category, c.count) for c in summary.by_category]),
+            ]
+        )
+
+        return InsightsResponse(
+            generated_for=today,
+            days=days,
+            insights=[
+                InsightOut(key=i.key, text=i.text, evidence=i.evidence, tone=i.tone)
+                for i in found
+            ],
+        )
 
     # ---------------------------------------------------------- correlations
     def correlations(self, days: int = 90, today: Optional[date] = None) -> CorrelationsResponse:
