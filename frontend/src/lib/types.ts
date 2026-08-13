@@ -492,6 +492,15 @@ export interface PlanItem {
   confidence: number;
 }
 
+export interface DeferResponse {
+  task_id: string;
+  title: string;
+  scheduled_for: string;
+  /** Deferring never moves a due date, so a late task stays late. */
+  still_overdue: boolean;
+  detail: string;
+}
+
 export interface PlanInteractionIn {
   item_kind: "habit" | "task";
   item_id: string;

@@ -73,3 +73,27 @@ class PlanInteractionOut(BaseModel):
     #: this counts as a correction.
     actual_block: Optional[str] = None
     corrected: bool
+
+
+class DeferRequest(BaseModel):
+    """Push a planned task to another day.
+
+    `days` rather than a date so the common case needs no client-side date
+    arithmetic; the server owns "tomorrow", which is the only way it agrees
+    with the plan the server built.
+    """
+
+    task_id: str
+    days: int = 1
+    #: Where it was sitting when you moved it, for the correction record.
+    suggested_block: Optional[str] = None
+
+
+class DeferResponse(BaseModel):
+    task_id: str
+    title: str
+    scheduled_for: date
+    #: True when the new day is past the deadline — deferring never moves a due
+    #: date, so this stays visible rather than being quietly resolved.
+    still_overdue: bool
+    detail: str

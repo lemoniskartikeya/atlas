@@ -127,6 +127,15 @@ export function useCompleteTask() {
   return useMutation({ mutationFn: (id: string) => api.completeTask(id), onSuccess: refresh });
 }
 
+export function useDeferTask() {
+  const refresh = useRefreshEverything();
+  return useMutation({
+    mutationFn: (v: { task_id: string; days?: number; suggested_block?: string }) =>
+      api.deferTask(v),
+    onSuccess: refresh,
+  });
+}
+
 export function useUpdateTask() {
   const refresh = useRefreshEverything();
   return useMutation({

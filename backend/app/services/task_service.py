@@ -45,6 +45,19 @@ class TaskService:
     def get(self, task_id: str) -> Optional[Task]:
         return self.tasks.get(task_id)
 
+    def defer(self, task: Task, to_day: date) -> Task:
+        """Move when you plan to do something, without touching when it's due.
+
+        Deferring is a scheduling decision, not a renegotiation of the
+        deadline. A task pushed past its due date stays overdue and keeps
+        saying so — quietly sliding the date would turn "I'll do it tomorrow"
+        into "this was never late", which is the one thing a task tracker must
+        not do for you.
+        """
+        task.scheduled_for = to_day
+        self.tasks.commit()
+        return task
+
     def create(self, data: TaskCreate) -> Task:
         task = Task(**data.model_dump())
         self.tasks.add(task)

@@ -208,7 +208,14 @@ class PlannerService:
 
     # ------------------------------------------------------------------- tasks
     def _place_tasks(self, buckets, today, now_block) -> None:
-        open_tasks = list(self.tasks.list_tasks("open", today))[:_MAX_TASKS]
+        # A task with a day already chosen in the future is not today's problem.
+        # Without this, deferring something would leave it sitting in the plan,
+        # which reads as the button having done nothing.
+        open_tasks = [
+            t
+            for t in self.tasks.list_tasks("open", today)
+            if not (t.scheduled_for and t.scheduled_for > today)
+        ][:_MAX_TASKS]
         for task in open_tasks:
             overdue = bool(task.due_date and task.due_date < today)
             due_txt = ""

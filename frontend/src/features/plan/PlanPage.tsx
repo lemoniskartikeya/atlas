@@ -1,5 +1,6 @@
 import {
   Brain,
+  CalendarPlus,
   Check,
   Clock,
   Info,
@@ -12,7 +13,13 @@ import {
 } from "lucide-react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCompleteTask, useLogHabit, usePlan, useUnlogHabit } from "@/hooks/queries";
+import {
+  useCompleteTask,
+  useDeferTask,
+  useLogHabit,
+  usePlan,
+  useUnlogHabit,
+} from "@/hooks/queries";
 import { api } from "@/lib/api";
 import { cn, formatLongDate, todayISO } from "@/lib/utils";
 import type { PlanBlock, PlanItem } from "@/lib/types";
@@ -39,7 +46,9 @@ function ItemRow({ item, block, rank }: { item: PlanItem; block: string; rank: n
   const log = useLogHabit();
   const unlog = useUnlogHabit();
   const complete = useCompleteTask();
-  const busy = log.isPending || unlog.isPending || complete.isPending;
+  const defer = useDeferTask();
+  const busy =
+    log.isPending || unlog.isPending || complete.isPending || defer.isPending;
 
   const toggle = () => {
     if (item.done) {
@@ -112,6 +121,23 @@ function ItemRow({ item, block, rank }: { item: PlanItem; block: string; rank: n
           >
             front-load
           </span>
+        )}
+
+        {/* Tasks can be pushed to tomorrow. Habits can't: a daily habit comes
+            round again by itself, and skipping one is a different decision
+            with its own log entry. */}
+        {item.kind === "task" && !item.done && (
+          <button
+            onClick={() =>
+              defer.mutate({ task_id: item.id, days: 1, suggested_block: block })
+            }
+            disabled={busy}
+            title="Move to tomorrow — the due date doesn't change"
+            aria-label="Move to tomorrow"
+            className="shrink-0 rounded-full p-1 text-ink-faint transition-colors hover:bg-ink/[0.06] hover:text-ink"
+          >
+            <CalendarPlus size={13} />
+          </button>
         )}
 
         {item.done ? (
