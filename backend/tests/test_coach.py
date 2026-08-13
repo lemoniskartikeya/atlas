@@ -19,7 +19,12 @@ def _habit(client, **body):
 def test_status_defaults_to_local(client):
     body = client.get(f"{BASE}/coach/status").json()
     assert body["ai_available"] is False
-    assert body["model"] is None
+    assert body["has_key"] is False
+    # Status still names the provider and model that *would* answer, so
+    # Settings can show the choice before any key exists.
+    assert body["provider"] == "anthropic"
+    assert body["model"]
+    assert [p["id"] for p in body["providers"]]
 
 
 def test_local_reply_is_grounded_and_offline(client):
@@ -66,7 +71,9 @@ def _install_fake_anthropic(monkeypatch, resp):
             return resp
 
     class _Anthropic:
-        def __init__(self, api_key=None):
+        # Mirror the real client's tolerance for keyword args (timeout, etc.)
+        # so the stub does not fail on options the SDK genuinely accepts.
+        def __init__(self, api_key=None, **kwargs):
             self.messages = _Messages()
 
     module = types.ModuleType("anthropic")
@@ -84,7 +91,7 @@ def test_ai_mode_uses_claude_when_configured(client, monkeypatch):
         json={"messages": [{"role": "user", "content": "what should I focus on?"}]},
     ).json()
     assert r["mode"] == "ai"
-    assert r["model"] == get_settings().coach_model
+    assert r["model"] == "claude-opus-5"  # provider default, since none is pinned
     assert "Journal" in r["reply"]
 
     status = client.get(f"{BASE}/coach/status").json()
@@ -203,4 +210,112 @@ def test_key_test_reports_missing_key(client, monkeypatch, tmp_path):
 
     body = client.post(f"{BASE}/coach/key/test").json()
     assert body["ok"] is False
-    assert "No API key" in body["detail"]
+    # Names the provider � with several to choose from, "no API key" alone
+    # doesn't tell you which one is missing.
+    assert "Anthropic" in body["detail"] and "key" in body["detail"]
+
+
+# ------------------------------------------------- choosing a provider (multi)
+#
+# The coach used to speak only to Anthropic, which made the one optional feature
+# in Atlas depend on one paid account. These pin the selection behaviour: keys
+# are kept per provider, an unknown id is refused, and the local provider needs
+# no key at all.
+def _env(monkeypatch, tmp_path):
+    from app.core import secrets_store
+
+    monkeypatch.setattr(secrets_store, "ENV_PATH", tmp_path / ".env")
+    return secrets_store
+
+
+def test_status_lists_every_provider_with_a_way_to_get_a_key(client):
+    providers = client.get(f"{BASE}/coach/status").json()["providers"]
+    by_id = {p["id"]: p for p in providers}
+
+    assert {"anthropic", "groq", "gemini", "openrouter", "ollama"} <= set(by_id)
+    for entry in providers:
+        assert entry["cost_note"], f"{entry['id']} does not say what it costs"
+        if entry["needs_key"]:
+            assert entry["key_url"], f"{entry['id']} gives no way to get a key"
+    # The local option is the one that needs nothing.
+    assert by_id["ollama"]["local"] is True
+    assert by_id["ollama"]["needs_key"] is False
+
+
+def test_choosing_a_provider_switches_who_answers(client, monkeypatch, tmp_path):
+    _env(monkeypatch, tmp_path)
+
+    body = client.put(f"{BASE}/coach/provider", json={"provider": "groq"}).json()
+    assert body["provider"] == "groq"
+    assert body["provider_label"] == "Groq"
+    # No model pinned, so the provider's own default is reported.
+    assert body["model"] == "llama-3.3-70b-versatile"
+    # Selected but unusable until a key exists — and that is stated, not implied.
+    assert body["ai_available"] is False
+    assert body["needs_key"] is True
+
+
+def test_a_pinned_model_overrides_the_provider_default(client, monkeypatch, tmp_path):
+    _env(monkeypatch, tmp_path)
+    body = client.put(
+        f"{BASE}/coach/provider",
+        json={"provider": "groq", "model": "llama-3.1-8b-instant"},
+    ).json()
+    assert body["model"] == "llama-3.1-8b-instant"
+
+
+def test_an_unknown_provider_is_refused(client):
+    res = client.put(f"{BASE}/coach/provider", json={"provider": "skynet"})
+    assert res.status_code == 400
+    assert "skynet" in res.json()["detail"]
+
+
+def test_keys_are_kept_per_provider(client, monkeypatch, tmp_path):
+    """Trying a second free tier must not discard the first one's key."""
+    _env(monkeypatch, tmp_path)
+
+    client.put(f"{BASE}/coach/key", json={"provider": "groq", "api_key": "gsk_aaaaaaaaaa"})
+    client.put(f"{BASE}/coach/key", json={"provider": "gemini", "api_key": "AIza_bbbbbbbbb"})
+
+    on_groq = client.put(f"{BASE}/coach/provider", json={"provider": "groq"}).json()
+    assert on_groq["has_key"] is True
+    assert on_groq["ai_available"] is True
+
+    on_gemini = client.put(f"{BASE}/coach/provider", json={"provider": "gemini"}).json()
+    assert on_gemini["has_key"] is True
+    # The earlier key survived the switch.
+    assert on_gemini["key_hint"] != on_groq["key_hint"]
+
+
+def test_the_local_provider_needs_no_key(client, monkeypatch, tmp_path):
+    _env(monkeypatch, tmp_path)
+    body = client.put(f"{BASE}/coach/provider", json={"provider": "ollama"}).json()
+
+    assert body["local_provider"] is True
+    assert body["needs_key"] is False
+    # Usable without any key — whether Ollama is actually running is proven by
+    # asking it, not by configuration.
+    assert body["ai_available"] is True
+
+
+def test_an_unreachable_provider_falls_back_to_the_local_answer(
+    client, monkeypatch, tmp_path
+):
+    """A dead provider must never cost the user their answer."""
+    _env(monkeypatch, tmp_path)
+    _habit(client, title="Stretch")
+    client.put(f"{BASE}/coach/provider", json={"provider": "ollama"})
+
+    from app.services.llm import LLMError
+
+    def unreachable(*args, **kwargs):
+        raise LLMError("Couldn't reach Ollama on this machine.")
+
+    monkeypatch.setattr("app.services.llm.providers.OllamaProvider.complete", unreachable)
+
+    r = client.post(
+        f"{BASE}/coach/ask",
+        json={"messages": [{"role": "user", "content": "how am I doing?"}]},
+    ).json()
+    assert r["mode"] == "local"
+    assert r["reply"].strip()

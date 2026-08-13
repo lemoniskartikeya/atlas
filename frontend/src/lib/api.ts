@@ -196,9 +196,21 @@ export const api = {
     http<FocusSession>("/focus/sessions", { method: "POST", body: JSON.stringify(body) }),
 
   coachStatus: () => http<CoachStatus>("/coach/status"),
-  setCoachKey: (api_key: string) =>
-    http<CoachStatus>("/coach/key", { method: "PUT", body: JSON.stringify({ api_key }) }),
-  clearCoachKey: () => http<CoachStatus>("/coach/key", { method: "DELETE" }),
+  setCoachProvider: (provider: string, model?: string | null) =>
+    http<CoachStatus>("/coach/provider", {
+      method: "PUT",
+      body: JSON.stringify({ provider, model: model ?? null }),
+    }),
+  setCoachKey: (api_key: string, provider?: string) =>
+    http<CoachStatus>("/coach/key", {
+      method: "PUT",
+      body: JSON.stringify({ api_key, provider: provider ?? null }),
+    }),
+  clearCoachKey: (provider?: string) =>
+    http<CoachStatus>(
+      provider ? `/coach/key?provider=${encodeURIComponent(provider)}` : "/coach/key",
+      { method: "DELETE" },
+    ),
   testCoachKey: () => http<KeyTestResult>("/coach/key/test", { method: "POST" }),
   coachAsk: (messages: CoachMessage[], useAi: boolean) =>
     http<CoachResponse>("/coach/ask", {

@@ -82,11 +82,25 @@ class Settings(BaseSettings):
 
     data_dir: str = (BASE_DIR / "data").as_posix()
 
-    # AI coach (opt-in). When a key is set AND the `anthropic` package is installed,
-    # the coach can call the Claude API — which sends a compact digest of the user's
-    # data to Anthropic. Unset by default: the coach runs fully local/offline.
+    # AI coach (opt-in). With no key the coach runs fully offline, answering from
+    # the user's own numbers. Configuring a provider sends a compact digest of
+    # that data to whoever it names — except "ollama", which is a model running
+    # on this machine and never leaves it.
+    #
+    # Keys live one per provider (ATLAS_GROQ_API_KEY, ATLAS_GEMINI_API_KEY, …)
+    # so switching provider doesn't discard the key for the previous one.
+    coach_provider: str = "anthropic"
+    #: Blank means "whatever that provider's default model is".
+    coach_model: str = ""
+
     anthropic_api_key: Optional[str] = None
-    coach_model: str = "claude-opus-5"
+    groq_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+
+    def coach_key_for(self, provider_id: str) -> Optional[str]:
+        """The stored key for one provider, if any. Local providers have none."""
+        return getattr(self, f"{provider_id.strip().lower()}_api_key", None)
 
     # Background jobs (retraining, automatic backups). Runs in-process; set
     # false to keep the API purely request-driven.

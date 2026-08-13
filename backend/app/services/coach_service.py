@@ -21,14 +21,22 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.core.secrets_store import mask
 from app.schemas.coach import CoachMessage
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
+from app.services.llm import ChatMessage, LLMError, Provider, get_provider, provider_catalog
 from app.services.prediction_service import PredictionService
 from app.services.review_service import WeeklyReviewService
 
+log = get_logger("atlas.coach")
+
 _MAX_TOKENS = 2000
+#: One token is enough to prove a key works without spending on a real answer.
+_TEST_TOKENS = 8
+#: Local models on modest hardware are slow; the network providers are not.
+_TIMEOUT = 120.0
 
 
 def _friendly_api_error(exc: Exception) -> str:
@@ -53,21 +61,36 @@ class CoachService:
         self.session = session
         self.habits = HabitService(session)
 
+    # ------------------------------------------------------------------ provider
+    @staticmethod
+    def _selected() -> tuple[Provider, Optional[str], str]:
+        """The configured provider, its key, and the model to ask for."""
+        settings = get_settings()
+        provider = get_provider(settings.coach_provider)
+        key = settings.coach_key_for(provider.info.id)
+        model = (settings.coach_model or "").strip() or provider.info.default_model
+        return provider, key, model
+
     # -------------------------------------------------------------------- status
     def status(self) -> dict:
-        settings = get_settings()
+        provider, key, model = self._selected()
         ready = self._ai_ready()
         return {
             "ai_available": ready,
-            "provider": "anthropic" if ready else None,
-            "model": settings.coach_model if ready else None,
+            "provider": provider.info.id,
+            "provider_label": provider.info.label,
+            "model": model,
+            "local_provider": provider.info.local,
+            "needs_key": not provider.info.local,
             "sdk_installed": self._sdk_installed(),
-            "has_key": bool(settings.anthropic_api_key),
-            "key_hint": mask(settings.anthropic_api_key),
+            "has_key": bool(key),
+            "key_hint": mask(key),
+            "providers": provider_catalog(),
         }
 
     @staticmethod
     def _sdk_installed() -> bool:
+        """Only Anthropic needs a client library; the rest are plain HTTP."""
         try:
             import anthropic  # noqa: F401
         except Exception:
@@ -76,30 +99,32 @@ class CoachService:
 
     @classmethod
     def _ai_ready(cls) -> bool:
-        return bool(get_settings().anthropic_api_key) and cls._sdk_installed()
+        provider, key, _ = cls._selected()
+        if provider.info.local:
+            return True  # reachability is proven by asking, not by config
+        if provider.info.id == "anthropic" and not cls._sdk_installed():
+            return False
+        return bool(key)
 
     def test_key(self) -> dict:
         """Round-trip the smallest possible request so Settings can show a real
         verdict instead of "saved" and a coach that silently stays local."""
-        settings = get_settings()
-        if not settings.anthropic_api_key:
-            return {"ok": False, "detail": "No API key saved."}
-        if not self._sdk_installed():
-            return {
-                "ok": False,
-                "detail": "The `anthropic` package isn't installed. Run: pip install -r requirements-ai.txt",
-            }
+        provider, key, model = self._selected()
+        if not provider.info.local and not key:
+            return {"ok": False, "detail": f"No {provider.info.label} API key saved."}
         try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-            client.messages.create(
-                model=settings.coach_model,
-                max_tokens=1,
-                messages=[{"role": "user", "content": "hi"}],
+            provider.complete(
+                system="Reply with the single word: ok",
+                messages=[ChatMessage(role="user", content="hi")],
+                model=model,
+                api_key=key,
+                max_tokens=_TEST_TOKENS,
+                timeout=_TIMEOUT,
             )
-            return {"ok": True, "detail": f"Connected to {settings.coach_model}."}
-        except Exception as exc:  # network / auth / bad model
+            return {"ok": True, "detail": f"Connected to {model} via {provider.info.label}."}
+        except LLMError as exc:
+            return {"ok": False, "detail": str(exc)}
+        except Exception as exc:  # pragma: no cover - unexpected client failure
             return {"ok": False, "detail": _friendly_api_error(exc)}
 
     # ----------------------------------------------------------------------- ask
@@ -118,7 +143,9 @@ class CoachService:
                 return {
                     "reply": reply,
                     "mode": "ai",
-                    "model": get_settings().coach_model,
+                    # The resolved model, not the raw setting — that is blank
+                    # whenever the provider's own default is in use.
+                    "model": self._selected()[2],
                     "grounded_on": today.isoformat(),
                 }
 
@@ -141,37 +168,29 @@ class CoachService:
             "habits": list(self.habits.list_habits(include_archived=False)),
         }
 
-    # ------------------------------------------------------------------- Claude
+    # --------------------------------------------------------------- the model
     def _ai_reply(self, messages: list[CoachMessage], ctx: dict) -> Optional[str]:
+        """Ask the configured provider. None means "fall back to the local answer".
+
+        Every failure lands here — no key, a rejected key, a provider that is
+        down, Ollama not running. The user still gets an answer grounded in
+        their own data; the mode badge tells them it came from Atlas itself.
+        """
+        provider, key, model = self._selected()
         try:
-            import anthropic
-
-            settings = get_settings()
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-
-            api_messages = [
-                {"role": m.role, "content": m.content}
-                for m in messages
-                if m.role in ("user", "assistant") and m.content.strip()
-            ]
-            if not api_messages or api_messages[0]["role"] != "user":
-                api_messages = [
-                    {"role": "user", "content": "Give me a short read on how I'm doing and what to focus on."}
-                ] + api_messages
-
-            resp = client.messages.create(
-                model=settings.coach_model,
-                max_tokens=_MAX_TOKENS,
+            return provider.complete(
                 system=self._system_prompt(ctx),
-                messages=api_messages,
+                messages=[ChatMessage(role=m.role, content=m.content) for m in messages],
+                model=model,
+                api_key=key,
+                max_tokens=_MAX_TOKENS,
+                timeout=_TIMEOUT,
             )
-            if getattr(resp, "stop_reason", None) == "refusal":
-                return None
-            text = "".join(
-                getattr(b, "text", "") for b in resp.content if getattr(b, "type", None) == "text"
-            )
-            return text.strip() or None
-        except Exception:  # pragma: no cover - network / optional dependency
+        except LLMError as exc:
+            log.info("coach.provider_unavailable", extra={"provider": provider.info.id, "error": str(exc)})
+            return None
+        except Exception as exc:  # pragma: no cover - unexpected client failure
+            log.warning("coach.provider_failed", extra={"provider": provider.info.id, "error": str(exc)})
             return None
 
     def _system_prompt(self, ctx: dict) -> str:

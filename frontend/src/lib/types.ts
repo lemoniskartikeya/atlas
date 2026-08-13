@@ -651,14 +651,35 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 
+export interface CoachProviderOption {
+  id: string;
+  label: string;
+  default_model: string;
+  /** Where to get a key. Atlas cannot obtain one on the user's behalf. */
+  key_url?: string | null;
+  /** Honest one-liner about cost, shown next to the choice. */
+  cost_note: string;
+  /** A model running on this machine: no key, nothing leaves the device. */
+  local: boolean;
+  needs_key: boolean;
+  suggested_models: string[];
+  /** Local providers only: models actually pulled on this machine. */
+  installed_models?: string[] | null;
+  available?: boolean | null;
+}
+
 export interface CoachStatus {
   ai_available: boolean;
   provider?: string | null;
+  provider_label?: string | null;
   model?: string | null;
+  local_provider: boolean;
+  needs_key: boolean;
   sdk_installed: boolean;
   has_key: boolean;
   /** Masked hint only — the full key is never returned by the API. */
   key_hint?: string | null;
+  providers: CoachProviderOption[];
 }
 
 export interface KeyTestResult {

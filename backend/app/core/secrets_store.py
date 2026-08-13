@@ -57,6 +57,26 @@ def set_anthropic_key(value: Optional[str]) -> None:
     set_secret(_KEY, value.strip() if value else None)
 
 
+def set_provider_key(provider_id: str, value: Optional[str]) -> None:
+    """Store one provider's key. Keys are kept per provider, not shared.
+
+    Switching provider must not throw away the key for the one you were using
+    — people try two free tiers before settling on one.
+    """
+    from app.services.llm.registry import key_env_name
+
+    set_secret(key_env_name(provider_id), value.strip() if value else None)
+
+
+def set_coach_provider(provider_id: str) -> None:
+    set_secret("ATLAS_COACH_PROVIDER", provider_id.strip().lower())
+
+
+def set_coach_model(model: Optional[str]) -> None:
+    """Blank means "use the provider's default"."""
+    set_secret("ATLAS_COACH_MODEL", (model or "").strip() or None)
+
+
 def mask(value: Optional[str]) -> Optional[str]:
     """`sk-ant-api03-abc…wxyz` — enough to recognise, not enough to use."""
     if not value:
