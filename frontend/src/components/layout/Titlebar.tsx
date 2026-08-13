@@ -65,9 +65,12 @@ export function Titlebar() {
         )} ${Math.round(r.width)}x${Math.round(r.height)}`;
       },
     );
+    const nav = navigator as Navigator & { deviceMemory?: number };
     void reportDesktopInfo(
       "chrome",
-      `dpr=${window.devicePixelRatio} viewport=${window.innerWidth}x${window.innerHeight} ` +
+      `effects=${document.documentElement.dataset.effects} ` +
+        `cores=${nav.hardwareConcurrency ?? "?"} memGB=${nav.deviceMemory ?? "?"} ` +
+        `dpr=${window.devicePixelRatio} viewport=${window.innerWidth}x${window.innerHeight} ` +
         `doc=${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight} ` +
         `bar=${Math.round(bar.left)},${Math.round(bar.top)} ${Math.round(bar.width)}x${Math.round(bar.height)} ` +
         `buttons=[${buttons.join(" | ")}]`,

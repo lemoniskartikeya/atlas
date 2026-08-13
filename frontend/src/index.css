@@ -112,6 +112,7 @@ body {
     radial-gradient(46% 52% at 82% 86%, rgb(190 124 116 / 0.11), transparent 70%),
     radial-gradient(52% 56% at 20% 90%, rgb(110 143 99 / 0.12), transparent 72%);
   filter: blur(52px) saturate(112%);
+  will-change: transform;
   animation: aurora-drift 34s ease-in-out infinite;
 }
 
@@ -140,12 +141,16 @@ body {
 }
 
 @keyframes aurora-drift {
+  /* Translate only — no scale. The layer this animates carries a 52px blur,
+     and scaling a blurred layer forces the compositor to re-rasterize the
+     blur every frame instead of just moving a finished texture. The drift
+     reads the same; the cost does not. */
   0%,
   100% {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    transform: translate3d(-2%, 1.5%, 0) scale(1.05);
+    transform: translate3d(-2.5%, 1.8%, 0);
   }
 }
 
@@ -400,4 +405,44 @@ button {
    scroll by that much. --chrome-h is 0 in a browser, so this is just 100vh. */
 .app-viewport {
   min-height: calc(100vh - var(--chrome-h));
+}
+
+/* ------------------------------------------------------------ lite effects */
+/* The two genuinely expensive things in this design are `backdrop-filter`
+   (the compositor re-samples everything behind every panel, on every scroll)
+   and the full-viewport blurred aurora. On integrated graphics that is the
+   difference between smooth and not.
+
+   Lite mode drops both and keeps everything else — same palette, same layout,
+   same type. Panels become opaque instead of frosted, which is why each one
+   needs a real background rather than the translucent one it layers over the
+   aurora. Chosen automatically on low-core/low-memory machines, and
+   overridable in Settings. */
+html[data-effects="lite"] .app-aurora::before,
+html[data-effects="lite"] .app-aurora::after {
+  display: none;
+}
+
+html[data-effects="lite"] .glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgb(var(--panel));
+}
+
+html[data-effects="lite"] .topbar-scrim::before {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgb(var(--canvas));
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Any remaining utility blur (the titlebar, overlay scrims). */
+html[data-effects="lite"] [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-effects="lite"] .shimmer {
+  animation: none;
 }
