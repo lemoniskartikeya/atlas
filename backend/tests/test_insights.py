@@ -334,3 +334,34 @@ def test_insights_are_scoped_to_the_signed_in_account(client, other_client):
 @pytest.mark.parametrize("days", [27, 731])
 def test_the_window_is_bounded(client, days):
     assert client.get(f"{BASE}/analytics/insights?days={days}").status_code == 422
+
+
+# ------------------------------------------ the window vs. when things began
+def test_a_habit_is_not_missed_before_it_existed(client, db_session):
+    """The 365-day window is longer than most habits have been alive.
+
+    Counting the months before a habit was created as missed days drags every
+    rate towards nothing — a perfect three-week record reads as 6%, and the
+    weekday sentence built on top of it says something plainly untrue.
+    """
+    from app.services.analytics_service import AnalyticsService
+
+    habit = client.post(
+        f"{BASE}/habits", json={"title": "Weights", "frequency": "daily"}
+    ).json()
+    today = date.today()
+    for i in range(21):
+        client.post(
+            f"{BASE}/habits/{habit['id']}/logs",
+            json={
+                "date": (today - timedelta(days=i)).isoformat(),
+                "status": HabitLogStatus.COMPLETED.value,
+            },
+        )
+
+    rows = AnalyticsService(db_session).daily_frame(365, today)
+    due_days = [r for r in rows if r["due"] > 0]
+
+    assert len(due_days) == 21, "only the days the habit has been alive are due"
+    assert all(r["rate"] == 1.0 for r in due_days), "a perfect record must read as perfect"
+    assert all(r["due"] == 0 for r in rows[:-21]), "nothing was due before it existed"

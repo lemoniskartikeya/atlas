@@ -11,6 +11,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.timeutil import local_day
 from app.domain.enums import SUCCESS_STATUSES, HabitLogStatus, TaskStatus
 from app.repositories.habit_repo import HabitLogRepository, HabitRepository
 from app.repositories.journal_repo import JournalRepository
@@ -131,12 +132,25 @@ class AnalyticsService:
         success: list[set[date]] = [
             {l.date for l in h.logs if l.status in SUCCESS_STATUSES} for h in habits
         ]
+        # Nothing is due before it exists. Without this, a habit started last
+        # month is counted as missed on all 340 days of the window that came
+        # before it, which drags every rate down towards nothing and makes a
+        # perfect record read as a bad one.
+        began: list[date] = [
+            min(
+                [local_day(h.created_at, today)]
+                + ([min(l.date for l in h.logs)] if h.logs else [])
+            )
+            for h in habits
+        ]
 
         rows: list[dict] = []
         d = start
         while d <= today:
             due = done = 0
-            for habit, succ in zip(habits, success):
+            for habit, succ, first_day in zip(habits, success, began):
+                if d < first_day:
+                    continue
                 if streaks.is_occurrence_day(habit.frequency, habit.custom_days, d):
                     due += 1
                     if d in succ:
