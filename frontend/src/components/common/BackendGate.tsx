@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AlertTriangle, Orbit } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { AtlasMark } from "@/components/ui/atlas-mark";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { isDesktop } from "@/lib/desktop";
@@ -56,12 +57,12 @@ export function BackendGate({ children }: { children: ReactNode }) {
   if (state === "ready") return <>{children}</>;
 
   return (
-    <div className="app-aurora grid min-h-screen place-items-center p-6">
+    <div className="app-aurora app-viewport grid place-items-center p-6">
       <div className="relative z-10 flex max-w-sm flex-col items-center text-center">
         {state === "waiting" ? (
           <>
             <div className="grid h-12 w-12 animate-pulse place-items-center rounded-2xl bg-accent text-white">
-              <Orbit size={24} />
+              <AtlasMark size={23} />
             </div>
             <p className="mt-4 font-display text-lg font-semibold text-ink">Starting Atlas…</p>
             <p className="mt-1 text-[13px] text-ink-muted">Waking the local engine.</p>

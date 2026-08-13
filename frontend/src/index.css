@@ -394,3 +394,10 @@ button {
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+
+/* A full screen minus the custom titlebar. Using min-h-screen alongside the
+   titlebar would make every page one chrome-height taller than the window and
+   scroll by that much. --chrome-h is 0 in a browser, so this is just 100vh. */
+.app-viewport {
+  min-height: calc(100vh - var(--chrome-h));
+}

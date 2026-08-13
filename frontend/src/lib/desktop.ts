@@ -18,6 +18,37 @@ async function appWindow() {
   return getCurrentWindow();
 }
 
+/**
+ * Report a webview-side failure into the desktop log.
+ *
+ * A release build has no console anyone can open, so an IPC rejection that is
+ * only `console.error`d is invisible — the feature just looks broken with no
+ * trail. Never throws: a logger that can fail is worse than no logger.
+ */
+export async function reportDesktopError(context: string, err: unknown): Promise<void> {
+  const message =
+    err instanceof Error ? `${err.name}: ${err.message}` : String(err ?? "unknown error");
+  console.error(`[atlas] ${context}: ${message}`);
+  if (!isDesktop()) return;
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("log_ui_error", { context, message });
+  } catch {
+    /* the log sink itself is unavailable — nothing more we can do */
+  }
+}
+
+/** Note something into the desktop log. Never throws. */
+export async function reportDesktopInfo(context: string, message: string): Promise<void> {
+  if (!isDesktop()) return;
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("log_ui_info", { context, message });
+  } catch {
+    /* logging is best effort */
+  }
+}
+
 export const windowControls = {
   minimize: async () => {
     if (isDesktop()) await (await appWindow()).minimize();
@@ -37,6 +68,16 @@ export const windowControls = {
   onResized: async (fn: () => void): Promise<() => void> => {
     if (!isDesktop()) return () => {};
     return (await appWindow()).onResized(fn);
+  },
+  /**
+   * Drag the window from the custom titlebar.
+   *
+   * `-webkit-app-region: drag` is a Chromium feature that WebView2 does not
+   * reliably honour, so the CSS alone leaves the titlebar unable to move the
+   * window. Tauri's own `startDragging` is the supported path.
+   */
+  startDragging: async () => {
+    if (isDesktop()) await (await appWindow()).startDragging();
   },
 };
 

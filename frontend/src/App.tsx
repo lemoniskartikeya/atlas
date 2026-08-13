@@ -20,7 +20,7 @@ function AppGate({ children }: { children: React.ReactNode }) {
 
   // Render nothing (not a spinner) for the sub-second token check — a flash of
   // loading chrome before a login form reads as jank.
-  if (!ready) return <div className="app-aurora min-h-screen" />;
+  if (!ready) return <div className="app-aurora app-viewport" />;
   if (!user) return <LoginScreen />;
   return <>{children}</>;
 }

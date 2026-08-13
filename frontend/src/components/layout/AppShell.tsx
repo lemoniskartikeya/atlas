@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import { Titlebar } from "./Titlebar";
 import { CommandPalette } from "./CommandPalette";
 
 /** True when the event target accepts text, so a bare letter is content. */
@@ -54,8 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   return (
-    <div className="app-aurora relative flex min-h-screen flex-col">
-      <Titlebar />
+    <div className="app-aurora app-viewport relative flex flex-col">
       <div className="relative z-10 flex flex-1">
         <Sidebar />
         <div className="flex flex-1 flex-col">

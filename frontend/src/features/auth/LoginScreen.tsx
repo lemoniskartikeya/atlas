@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, Check, Eye, EyeOff, Orbit, X } from "lucide-react";
+import { AlertTriangle, Check, Eye, EyeOff, X } from "lucide-react";
+import { AtlasMark } from "@/components/ui/atlas-mark";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,7 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="app-aurora relative grid min-h-screen place-items-center p-4">
+    <div className="app-aurora app-viewport relative grid place-items-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 14, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -112,7 +113,7 @@ export function LoginScreen() {
       >
         <div className="flex flex-col items-center text-center">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-accent text-white shadow-sm">
-            <Orbit size={24} />
+            <AtlasMark size={23} />
           </div>
           <h1 className="mt-3 font-display text-2xl font-semibold text-ink">
             {mode === "signup" ? (needsSetup ? "Welcome to Atlas" : "Create an account") : "Atlas"}
