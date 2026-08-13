@@ -51,6 +51,39 @@ def habit_predictions(
     return by_id, result.get("reliability")
 
 
+def task_predictions(
+    session: Session, today: Optional[date] = None
+) -> tuple[Optional[dict[str, dict]], Optional[float]]:
+    """Return ``({task_id: prediction_dict}, reliability)`` or ``(None, None)``.
+
+    ``prediction_dict`` carries ``probability`` and ``explanation`` for open
+    tasks that are not yet overdue (see :meth:`MLService.predict_tasks`).
+
+    Same cheap gate as :func:`habit_predictions`, and the same contract: a
+    caller that gets ``None`` falls back to whatever it did before there was a
+    model, so nothing downstream has to know the ML layer exists.
+    """
+    try:
+        from app.learning import registry
+    except Exception:  # pragma: no cover - optional dependency missing
+        return None, None
+    if not registry.latest_meta(current_user_id(session), registry.TASK):
+        return None, None
+
+    try:
+        from app.services.ml_service import MLService
+    except Exception:  # pragma: no cover - optional dependency missing
+        return None, None
+    try:
+        result = MLService(session).predict_tasks(today)
+    except Exception:  # pragma: no cover - defensive
+        return None, None
+    if not result.get("trained"):
+        return None, None
+    by_id = {p["task_id"]: p for p in result.get("predictions", [])}
+    return by_id, result.get("reliability")
+
+
 def simulate(session: Session, overrides: dict, today: Optional[date] = None) -> Optional[dict]:
     """Run a what-if simulation, or ``None`` when no model is available.
 

@@ -1,10 +1,10 @@
-"""Prediction engine: how today is likely to end, streak-break risk, burnout.
+"""Prediction engine: how today ends, streak and deadline risk, burnout.
 
-Leans on the Phase-4 completion model when it's trained (per-habit probabilities
-via the shared ML gateway) and degrades to transparent trend heuristics
-otherwise. Burnout is deliberately a documented weighted formula over sleep,
-energy, completion, and load — not a learned black box — so its drivers are
-always inspectable.
+Leans on the trained models when they exist — per-habit completion and per-task
+on-time probabilities, both via the shared ML gateway — and degrades to
+transparent trend heuristics otherwise. Burnout is deliberately a documented
+weighted formula over sleep, energy, completion, and load, not a learned black
+box, so its drivers are always inspectable.
 """
 from __future__ import annotations
 
@@ -15,10 +15,12 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.domain.enums import SUCCESS_STATUSES
+from app.domain.tasks import on_time_outcome
 from app.models.habit import Habit
 from app.schemas.habit import HabitStats
 from app.schemas.prediction import (
     BurnoutSignal,
+    DeadlineRisk,
     ExpectedCompletion,
     PredictionReport,
     StreakRisk,
@@ -76,8 +78,90 @@ class PredictionService:
             reliability=round(reliability, 3) if reliability is not None else None,
             expected_completion=self._expected(due, reliability, model_backed),
             streak_risks=self._streak_risks(due, model_backed),
+            deadline_risks=self._deadline_risks(today),
             burnout=self._burnout(today, all_habits, due),
         )
+
+    # --------------------------------------------------------- deadline risks
+    #: How far ahead to look. Beyond a week there is still time to act, and a
+    #: warning that early is just noise you learn to scroll past.
+    DEADLINE_HORIZON_DAYS = 7
+    #: Settled tasks needed before a personal on-time rate means anything.
+    MIN_TASK_HISTORY = 5
+
+    def _deadline_risks(self, today: date) -> list[DeadlineRisk]:
+        """Dated tasks that look like they may not land, and why.
+
+        Uses the task model when one is trained. Without it, falls back to the
+        user's own recent on-time rate tempered by how soon the date is — a
+        deadline a week out is genuinely less at risk than the same one today,
+        because there is still room to act. With neither a model nor enough
+        history, it says nothing at all rather than inventing a number.
+        """
+        preds, _reliability = ml_gateway.task_predictions(self.session, today)
+
+        horizon = today + timedelta(days=self.DEADLINE_HORIZON_DAYS)
+        upcoming = [
+            t
+            for t in self.tasks.tasks.open_tasks()
+            if t.due_date is not None and today <= t.due_date <= horizon
+        ]
+        if not upcoming:
+            return []
+
+        settled = [
+            outcome
+            for outcome in (on_time_outcome(t, today) for t in self.tasks.tasks.list_all())
+            if outcome is not None
+        ]
+        on_time_rate = (sum(settled) / len(settled)) if settled else None
+
+        risks: list[DeadlineRisk] = []
+        for task in upcoming:
+            days_left = (task.due_date - today).days
+            prob = preds[task.id]["probability"] if (preds and task.id in preds) else None
+
+            if prob is not None:
+                risk = 1.0 - prob
+                basis = f"~{round(prob * 100)}% likely to land on time"
+            elif on_time_rate is not None and len(settled) >= self.MIN_TASK_HISTORY:
+                # Urgency tempers the base rate: same odds, less room to recover.
+                urgency = _clamp01(1.0 - days_left / (self.DEADLINE_HORIZON_DAYS + 1))
+                risk = _clamp01((1.0 - on_time_rate) * urgency)
+                basis = (
+                    f"you've hit {round(on_time_rate * 100)}% of your last "
+                    f"{len(settled)} deadlines"
+                )
+            else:
+                continue  # nothing to base a claim on
+
+            level = "high" if risk >= 0.5 else "medium" if risk >= 0.3 else "low"
+            if level == "low":
+                continue
+
+            when = (
+                "due today"
+                if days_left == 0
+                else "due tomorrow"
+                if days_left == 1
+                else f"due in {days_left} days"
+            )
+            risks.append(
+                DeadlineRisk(
+                    task_id=task.id,
+                    title=task.title,
+                    due_date=task.due_date,
+                    days_left=days_left,
+                    probability=round(prob, 3) if prob is not None else None,
+                    risk=round(risk, 3),
+                    level=level,
+                    reason=f"{when.capitalize()} — {basis}.",
+                )
+            )
+
+        # Soonest first among equally risky ones: that is the order you can act in.
+        risks.sort(key=lambda r: (-r.risk, r.days_left))
+        return risks[:4]
 
     # ---------------------------------------------------------- expected today
     @staticmethod

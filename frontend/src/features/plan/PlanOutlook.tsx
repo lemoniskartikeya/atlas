@@ -1,10 +1,10 @@
-import { AlertTriangle, Flame, Gauge, TrendingUp } from "lucide-react";
+import { AlertTriangle, CalendarClock, Flame, Gauge, TrendingUp } from "lucide-react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { usePredictions } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
-import type { BurnoutSignal, StreakRisk } from "@/lib/types";
+import type { BurnoutSignal, DeadlineRisk, StreakRisk } from "@/lib/types";
 
 const BURNOUT_COLOR: Record<BurnoutSignal["level"], string> = {
   low: "rgb(var(--success))",
@@ -12,7 +12,11 @@ const BURNOUT_COLOR: Record<BurnoutSignal["level"], string> = {
   elevated: "#d0605e",
 };
 
-function LevelChip({ level }: { level: StreakRisk["level"] | BurnoutSignal["level"] }) {
+function LevelChip({
+  level,
+}: {
+  level: StreakRisk["level"] | DeadlineRisk["level"] | BurnoutSignal["level"];
+}) {
   const warm = level === "high" || level === "elevated";
   const mid = level === "medium" || level === "moderate";
   return (
@@ -69,7 +73,12 @@ export function PlanOutlook() {
     return <Skeleton className="h-40 rounded-2xl" />;
   }
 
-  const { expected_completion: ec, streak_risks: risks, burnout } = data;
+  const {
+    expected_completion: ec,
+    streak_risks: risks,
+    deadline_risks: deadlines = [],
+    burnout,
+  } = data;
   const burnoutPct = Math.round(burnout.score * 100);
 
   return (
@@ -122,6 +131,32 @@ export function PlanOutlook() {
             </div>
           )}
         </div>
+
+        {/* Deadlines at risk — only shown when there's a basis for the claim,
+            so it stays absent for a new account rather than reading "none". */}
+        {deadlines.length > 0 && (
+          <div className="border-t border-border/10 pt-3">
+            <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium text-ink">
+              <CalendarClock size={13} className="text-accent" />
+              Deadlines at risk
+            </div>
+            <div className="space-y-2">
+              {deadlines.map((d) => (
+                <div key={d.task_id} className="glass-inset rounded-xl p-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink">{d.title}</span>
+                    <span className="shrink-0 text-[11px] tabular-nums text-ink-muted">
+                      {d.days_left === 0 ? "today" : `${d.days_left}d`} ·{" "}
+                      {Math.round(d.risk * 100)}% risk
+                    </span>
+                    <LevelChip level={d.level} />
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{d.reason}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Burnout meter */}
         <div className="border-t border-border/10 pt-3">

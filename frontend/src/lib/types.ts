@@ -535,6 +535,18 @@ export interface StreakRisk {
   reason: string;
 }
 
+export interface DeadlineRisk {
+  task_id: string;
+  title: string;
+  due_date: string;
+  days_left: number;
+  /** On-time probability when the task model is trained; null on the heuristic path. */
+  probability: number | null;
+  risk: number;
+  level: "high" | "medium";
+  reason: string;
+}
+
 export interface BurnoutSignal {
   score: number;
   level: "low" | "moderate" | "elevated";
@@ -548,6 +560,8 @@ export interface PredictionReport {
   reliability?: number | null;
   expected_completion: ExpectedCompletion;
   streak_risks: StreakRisk[];
+  /** Empty when there is no basis for a claim. */
+  deadline_risks: DeadlineRisk[];
   burnout: BurnoutSignal;
 }
 

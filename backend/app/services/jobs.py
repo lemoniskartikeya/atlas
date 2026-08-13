@@ -40,6 +40,9 @@ TICK_SECONDS = 15 * 60
 
 # Retraining is pointless without meaningfully more evidence than last time.
 RETRAIN_MIN_NEW_ROWS = 25
+#: The task equivalent. Far smaller, because tasks come due a handful at a time
+#: while habits produce a row every day — 25 would be most of a season's work.
+RETRAIN_MIN_NEW_TASKS = 8
 
 # How often to look again while an account still has *no* model at all.
 #
@@ -52,12 +55,12 @@ RETRAIN_MIN_NEW_ROWS = 25
 FIRST_MODEL_CHECK_INTERVAL = timedelta(hours=3)
 
 
-def _model_exists(session: Session) -> bool:
+def _model_exists(session: Session, kind: str = "habit") -> bool:
     """Whether this account already has a trained model. Never raises."""
     try:
         from app.learning import registry
 
-        return registry.latest_meta(current_user_id(session)) is not None
+        return registry.latest_meta(current_user_id(session), kind) is not None
     except Exception:
         return False
 
@@ -65,6 +68,10 @@ def _model_exists(session: Session) -> bool:
 def _retrain_interval(session: Session) -> timedelta:
     """Eager until this account has a model, weekly once it does."""
     return timedelta(days=7) if _model_exists(session) else FIRST_MODEL_CHECK_INTERVAL
+
+
+def _task_retrain_interval(session: Session) -> timedelta:
+    return timedelta(days=7) if _model_exists(session, "task") else FIRST_MODEL_CHECK_INTERVAL
 
 
 @dataclass
@@ -158,6 +165,75 @@ def retrain_model(session: Session) -> JobResult:
     )
 
 
+def _train_task_model(session: Session) -> dict:
+    """Run a task training pass. Split out so tests can drive the job's logic."""
+    from app.services.ml_service import MLService
+
+    return MLService(session).train_tasks()
+
+
+def retrain_task_model(session: Session) -> JobResult:
+    """Keep the will-this-be-done-on-time model fresh, on the same terms.
+
+    Deliberately its own job rather than a second half of :func:`retrain_model`:
+    the two models are fed by different evidence that accrues at very different
+    speeds, and folding them together would mean a quiet week for tasks blocking
+    a habit retrain that was ready to go.
+    """
+    try:
+        from app.learning import registry
+    except Exception:
+        return JobResult("skipped", "ML dependencies are not installed.")
+
+    from app.learning import task_features
+    from app.repositories.task_repo import TaskRepository
+
+    user_id = current_user_id(session)
+    today = date.today()
+    settled = sum(
+        1
+        for t in TaskRepository(session).list_all()
+        if task_features.outcome(t, today) is not None
+    )
+
+    meta = registry.latest_meta(user_id, registry.TASK)
+    if meta:
+        trained_on = int((meta.get("metrics") or {}).get("n_rows") or 0)
+        new_rows = settled - trained_on
+        if new_rows < RETRAIN_MIN_NEW_TASKS:
+            return JobResult(
+                "skipped",
+                f"Only {new_rows} more tasks have come due since the last model "
+                f"(need {RETRAIN_MIN_NEW_TASKS}).",
+            )
+
+    try:
+        result = _train_task_model(session)
+    except Exception as exc:
+        return JobResult("error", f"{type(exc).__name__}: {exc}")
+
+    if not result.get("trained"):
+        have = result.get("n_samples")
+        if isinstance(have, int):
+            from app.services.ml_service import MIN_TASK_SAMPLES
+
+            return JobResult(
+                "skipped",
+                f"Still gathering evidence — {have} of about {MIN_TASK_SAMPLES} tasks "
+                "have reached their due date. Give tasks a due date and Atlas "
+                "learns the rest on its own.",
+            )
+        return JobResult("skipped", str(result.get("reason", "Not enough data yet.")))
+
+    metrics = result.get("metrics") or {}
+    auc = metrics.get("roc_auc")
+    quality = f", ROC-AUC {auc:.3f}" if isinstance(auc, (int, float)) else ""
+    return JobResult(
+        "ok",
+        f"Trained v{result['version']} on {result.get('n_samples', '?')} tasks{quality}.",
+    )
+
+
 def auto_backup(session: Session) -> JobResult:
     """Write a dated JSON snapshot and prune old ones.
 
@@ -202,6 +278,17 @@ JOBS: list[Job] = [
         interval=timedelta(days=7),
         run=retrain_model,
         interval_fn=_retrain_interval,
+    ),
+    Job(
+        id="retrain_task_model",
+        label="Retrain task model",
+        description=(
+            "Refits the model that estimates whether a task will land on time, "
+            "using the tasks whose due dates have already passed."
+        ),
+        interval=timedelta(days=7),
+        run=retrain_task_model,
+        interval_fn=_task_retrain_interval,
     ),
     Job(
         id="auto_backup",

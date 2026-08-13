@@ -1,6 +1,7 @@
 """ML API DTOs."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
@@ -58,3 +59,24 @@ class PredictionsResponse(BaseModel):
     reliability: Optional[float] = None
     metrics: Optional[MLMetrics] = None
     predictions: list[HabitPrediction] = []
+
+
+class TaskPrediction(BaseModel):
+    task_id: str
+    title: str
+    due_date: date
+    priority: str
+    #: Probability the task lands on or before its due date.
+    probability: float  # 0..1
+    explanation: str
+
+
+class TaskPredictionsResponse(BaseModel):
+    trained: bool
+    version: Optional[str] = None
+    model_type: Optional[str] = None
+    reliability: Optional[float] = None
+    metrics: Optional[MLMetrics] = None
+    #: Open, not-yet-overdue tasks only, riskiest first. Overdue tasks are
+    #: already decided and are not predicted about.
+    predictions: list[TaskPrediction] = []

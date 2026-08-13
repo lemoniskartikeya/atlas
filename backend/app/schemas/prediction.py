@@ -34,6 +34,19 @@ class StreakRisk(BaseModel):
     reason: str
 
 
+class DeadlineRisk(BaseModel):
+    """A dated task that looks like it might not land in time."""
+
+    task_id: str
+    title: str
+    due_date: date
+    days_left: int  # 0 = due today
+    probability: Optional[float] = None  # on-time probability (task model)
+    risk: float  # 0..1
+    level: str  # "high" | "medium"
+    reason: str
+
+
 class BurnoutSignal(BaseModel):
     score: float  # 0..1 composite
     level: str  # "low" | "moderate" | "elevated"
@@ -47,4 +60,7 @@ class PredictionReport(BaseModel):
     reliability: Optional[float] = None
     expected_completion: ExpectedCompletion
     streak_risks: list[StreakRisk]
+    #: Empty when there is no basis for a claim — no dated tasks coming up, or
+    #: too little history to say anything about how they usually go.
+    deadline_risks: list[DeadlineRisk] = []
     burnout: BurnoutSignal
