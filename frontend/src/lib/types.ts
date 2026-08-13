@@ -492,6 +492,14 @@ export interface PlanItem {
   confidence: number;
 }
 
+export interface PlanInteractionIn {
+  item_kind: "habit" | "task";
+  item_id: string;
+  action: "completed" | "deferred" | "dismissed";
+  suggested_block: string;
+  suggested_rank?: number;
+}
+
 export interface PlanBlock {
   key: string;
   label: string;

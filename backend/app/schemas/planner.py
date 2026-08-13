@@ -47,3 +47,29 @@ class PlanResponse(BaseModel):
     open_count: int  # not-yet-done items across all blocks
     total_minutes: int
     blocks: list[PlanBlock]
+
+
+class PlanInteractionIn(BaseModel):
+    """What the user did with one suggestion.
+
+    The block and rank are the ones actually rendered, reported back by the
+    client — that is what the user saw and reacted to. The server supplies the
+    date and the hour, so a wrong clock on the client cannot rewrite history.
+    """
+
+    item_kind: str  # "habit" | "task"
+    item_id: str
+    action: str  # "completed" | "deferred" | "dismissed"
+    suggested_block: str  # "morning" | "afternoon" | "evening"
+    suggested_rank: Optional[int] = None
+
+
+class PlanInteractionOut(BaseModel):
+    recorded: bool
+    item_id: str
+    action: str
+    suggested_block: str
+    #: Where the user actually was. Differs from suggested_block exactly when
+    #: this counts as a correction.
+    actual_block: Optional[str] = None
+    corrected: bool

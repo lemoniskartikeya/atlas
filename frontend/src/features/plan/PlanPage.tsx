@@ -13,6 +13,7 @@ import {
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompleteTask, useLogHabit, usePlan, useUnlogHabit } from "@/hooks/queries";
+import { api } from "@/lib/api";
 import { cn, formatLongDate, todayISO } from "@/lib/utils";
 import type { PlanBlock, PlanItem } from "@/lib/types";
 import { PlanOutlook } from "./PlanOutlook";
@@ -34,7 +35,7 @@ function fmtMinutes(min: number): string {
 
 /* ------------------------------------------------------------- plan item row */
 
-function ItemRow({ item }: { item: PlanItem }) {
+function ItemRow({ item, block, rank }: { item: PlanItem; block: string; rank: number }) {
   const log = useLogHabit();
   const unlog = useUnlogHabit();
   const complete = useCompleteTask();
@@ -47,6 +48,20 @@ function ItemRow({ item }: { item: PlanItem }) {
     }
     if (item.kind === "habit") log.mutate({ id: item.id, body: { status: "completed" } });
     else complete.mutate(item.id);
+
+    // Tell the backend where this was suggested and that it was done from
+    // here, so the planner can learn where you actually do things. Nothing new
+    // to click — this rides along with the tick the user already pressed, and
+    // is deliberately not awaited: a failed note must never block the action.
+    void api
+      .recordPlanInteraction({
+        item_kind: item.kind as "habit" | "task",
+        item_id: item.id,
+        action: "completed",
+        suggested_block: block,
+        suggested_rank: rank,
+      })
+      .catch(() => {});
   };
 
   const prob = item.probability != null ? Math.round(item.probability * 100) : null;
@@ -156,8 +171,8 @@ function BlockCard({ block }: { block: PlanBlock }) {
         )}
       </CardHeader>
       <CardBody className="divide-y divide-border/10">
-        {block.items.map((item) => (
-          <ItemRow key={`${item.kind}-${item.id}`} item={item} />
+        {block.items.map((item, i) => (
+          <ItemRow key={`${item.kind}-${item.id}`} item={item} block={block.key} rank={i} />
         ))}
       </CardBody>
     </Card>

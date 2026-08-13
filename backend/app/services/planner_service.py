@@ -26,6 +26,7 @@ from app.domain.enums import Priority, SUCCESS_STATUSES, TimeOfDay
 from app.schemas.planner import PlanBlock, PlanItem, PlanResponse
 from app.services import ml_gateway
 from app.services.habit_service import HabitService
+from app.services.interaction_service import InteractionService
 from app.services.task_service import TaskService
 
 _PRIORITY_RANK = {
@@ -84,11 +85,15 @@ class PlannerService:
 
         preds, reliability = self._ml_predictions(today)
         model_backed = preds is not None
+        # Where the user actually does things, when that disagrees with where
+        # the planner has been putting them. Empty until someone has corrected
+        # the same item several times.
+        preferences = InteractionService(self.session).preferred_blocks(today)
 
         # (sort_key, PlanItem) per block; sorted once at the end.
         buckets: dict[str, list[tuple[tuple, PlanItem]]] = {k: [] for k, _, _ in _BLOCK_DEFS}
 
-        self._place_habits(buckets, preds, reliability, today, now_block)
+        self._place_habits(buckets, preds, reliability, today, now_block, preferences)
         self._place_tasks(buckets, today, now_block)
 
         blocks: list[PlanBlock] = []
@@ -131,7 +136,9 @@ class PlannerService:
         )
 
     # ------------------------------------------------------------------ habits
-    def _place_habits(self, buckets, preds, reliability, today, now_block) -> None:
+    def _place_habits(
+        self, buckets, preds, reliability, today, now_block, preferences=None
+    ) -> None:
         for habit in self.habits.list_habits(include_archived=False):
             success_dates = {l.date for l in habit.logs if l.status in SUCCESS_STATUSES}
             if not self.habits.is_due_today(habit, today, success_dates):
@@ -143,6 +150,14 @@ class PlannerService:
 
             # ANY-time habits land in the block you're in now, so they read as "now".
             block = _TOD_BLOCK.get(habit.time_preference, now_block)
+
+            # Observed behaviour outranks the stated preference. Someone who
+            # set "morning" once and has run every evening since is telling us
+            # something more reliable than the dropdown did.
+            learned = (preferences or {}).get(habit.id)
+            moved_from = None
+            if learned and learned[0] != block:
+                moved_from, block = block, learned[0]
 
             pred = preds.get(habit.id) if preds else None
             prob = pred["probability"] if pred else None
@@ -160,6 +175,13 @@ class PlannerService:
                 explanation=pred["explanation"] if pred else None,
                 reliability=reliability,
             )
+            if moved_from:
+                # Say it out loud: an item that silently moved would look like
+                # a bug to the person who chose the original slot.
+                reason = (
+                    f"You usually finish this in the {block} — moved here from the "
+                    f"{moved_from} ({learned[1]} times recently). " + reason
+                )
 
             item = PlanItem(
                 id=habit.id,

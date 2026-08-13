@@ -7,6 +7,7 @@ from app.models.habit import Habit, HabitLog
 from app.models.job import JobRun
 from app.models.journal import JournalEntry
 from app.models.notification import NotificationState
+from app.models.plan_interaction import PlanInteraction
 from app.models.note import Note
 from app.models.task import Project, Task
 from app.models.user import AuthSession, User
@@ -39,6 +40,7 @@ __all__ = [
     "HabitLog",
     "JournalEntry",
     "NotificationState",
+    "PlanInteraction",
     "Note",
     "Project",
     "Task",

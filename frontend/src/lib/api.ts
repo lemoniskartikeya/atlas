@@ -29,6 +29,7 @@ import type {
   JournalEntry,
   MLStatus,
   NotificationsResponse,
+  PlanInteractionIn,
   PlanResponse,
   PredictionReport,
   PredictionsResponse,
@@ -195,6 +196,11 @@ export const api = {
   trainModel: () => http<TrainOutcome>("/ml/train", { method: "POST" }),
 
   plan: () => http<PlanResponse>("/planner/today"),
+  recordPlanInteraction: (body: PlanInteractionIn) =>
+    http<{ recorded: boolean }>("/planner/interactions", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   predictions: () => http<PredictionReport>("/predictions"),
 
   notifications: () => http<NotificationsResponse>("/notifications"),
