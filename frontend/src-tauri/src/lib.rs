@@ -9,7 +9,7 @@ use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, RunEvent, WindowEvent,
+    Emitter, Manager, RunEvent, WindowEvent,
 };
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
@@ -39,17 +39,30 @@ fn spawn_backend(app: &tauri::AppHandle) {
         {
             Ok((mut rx, child)) => {
                 app.state::<Backend>().0.lock().unwrap().replace(child);
+                let handle = app.clone();
                 // Drain the sidecar's output into the app log; an unread pipe
                 // eventually blocks the child process.
                 tauri::async_runtime::spawn(async move {
                     use tauri_plugin_shell::process::CommandEvent;
+                    // The backend explains its own death in its last few lines.
+                    // Keeping the most recent one turns "it exited with code 3"
+                    // into something the user can act on.
+                    let mut last_line = String::new();
                     while let Some(event) = rx.recv().await {
                         match event {
                             CommandEvent::Stdout(line) | CommandEvent::Stderr(line) => {
-                                log::info!("backend: {}", String::from_utf8_lossy(&line).trim());
+                                let text = String::from_utf8_lossy(&line).trim().to_string();
+                                if !text.is_empty() {
+                                    last_line = text.clone();
+                                }
+                                log::info!("backend: {text}");
                             }
                             CommandEvent::Terminated(payload) => {
-                                log::warn!("backend exited: {:?}", payload.code);
+                                let reason = explain_backend_exit(&last_line);
+                                log::warn!("backend exited: {:?} — {reason}", payload.code);
+                                // Tell the window, so the splash can say what
+                                // happened instead of spinning until it times out.
+                                let _ = handle.emit("backend-failed", reason);
                                 break;
                             }
                             _ => {}
@@ -61,6 +74,63 @@ fn spawn_backend(app: &tauri::AppHandle) {
             Err(err) => log::warn!("could not start backend sidecar: {err}"),
         },
         Err(err) => log::warn!("no backend sidecar bundled ({err}) — expecting one on :8000"),
+    }
+}
+
+/// Turn the backend's dying words into something a person can act on.
+///
+/// By far the most common cause is another copy still holding the port — an
+/// orphaned sidecar from a force-quit, or a backend someone started by hand.
+/// "Exited with code 3" tells the user nothing; naming the port tells them
+/// exactly what to close.
+fn explain_backend_exit(last_line: &str) -> String {
+    let line = last_line.to_lowercase();
+    if line.contains("only one usage of each socket address")
+        || line.contains("address already in use")
+        || line.contains("errno 10048")
+        || line.contains("errno 48")
+    {
+        return "Port 8000 is already in use — another copy of Atlas (or its backend) \
+is still running. Quit it from the system tray, or end any 'atlas-backend' \
+process, then try again."
+            .into();
+    }
+    if line.is_empty() {
+        return "The bundled backend stopped before it finished starting.".into();
+    }
+    format!("The bundled backend stopped before it finished starting: {last_line}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::explain_backend_exit;
+
+    #[test]
+    fn a_port_clash_names_the_port_and_what_to_close() {
+        // The exact wording Windows, Linux and macOS use for the same problem.
+        for line in [
+            "ERROR:    [Errno 10048] error while attempting to bind on address \
+('127.0.0.1', 8000): only one usage of each socket address is normally permitted",
+            "[Errno 98] Address already in use",
+            "OSError: [Errno 48] Address already in use",
+        ] {
+            let reason = explain_backend_exit(line);
+            assert!(reason.contains("Port 8000"), "unhelpful for: {line}");
+            assert!(reason.contains("tray"), "does not say how to fix: {line}");
+        }
+    }
+
+    #[test]
+    fn an_unknown_failure_still_carries_the_backend_s_own_words() {
+        let reason = explain_backend_exit("ModuleNotFoundError: No module named 'app'");
+        assert!(reason.contains("ModuleNotFoundError"));
+    }
+
+    #[test]
+    fn a_silent_death_does_not_produce_a_dangling_sentence() {
+        let reason = explain_backend_exit("");
+        assert!(reason.ends_with('.'), "got: {reason}");
+        assert!(!reason.contains(':'), "trailing empty detail: {reason}");
     }
 }
 
@@ -194,6 +264,7 @@ pub fn run() {
         // Remembers size/position/maximised state between launches.
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init());
 
     #[cfg(desktop)]

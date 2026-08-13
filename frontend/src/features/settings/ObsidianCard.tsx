@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { isDesktop, pickFolder } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 import type { ObsidianSyncResult, ObsidianVaultCheck } from "@/lib/types";
 
@@ -61,6 +62,16 @@ export function ObsidianCard() {
 
   const doCheck = () => run("check", async () => setCheck(await api.checkObsidianVault(path)));
 
+  const browse = () =>
+    run("check", async () => {
+      const picked = await pickFolder("Choose your Obsidian vault");
+      if (!picked) return; // cancelled
+      remember(picked);
+      // Validate straight away — picking a folder and then having to press
+      // Check is a step the user shouldn't have to think about.
+      setCheck(await api.checkObsidianVault(picked));
+    });
+
   const doSync = () =>
     run("sync", async () => {
       const res = await api.syncObsidian(path);
@@ -90,9 +101,20 @@ export function ObsidianCard() {
             spellCheck={false}
             className="flex-1 font-mono text-[12px]"
           />
-          <Button variant="outline" onClick={doCheck} disabled={!path.trim() || busy !== null}>
-            {busy === "check" ? <Loader2 size={15} className="animate-spin" /> : "Check"}
-          </Button>
+          {isDesktop() ? (
+            <Button variant="outline" onClick={browse} disabled={busy !== null}>
+              {busy === "check" ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <FolderOpen size={15} />
+              )}
+              Choose…
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={doCheck} disabled={!path.trim() || busy !== null}>
+              {busy === "check" ? <Loader2 size={15} className="animate-spin" /> : "Check"}
+            </Button>
+          )}
         </div>
 
         {check && (

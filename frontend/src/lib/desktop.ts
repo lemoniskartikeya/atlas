@@ -65,6 +65,40 @@ export async function openExternal(url: string): Promise<void> {
   await invoke("open_external", { url });
 }
 
+/**
+ * Subscribe to the shell giving up on the backend.
+ *
+ * The splash used to spin for its full 25-second timeout and then guess at the
+ * cause, while the shell had known the real reason within two seconds — it can
+ * read the backend's dying words. Returns an unsubscribe function; resolves to
+ * a no-op in a browser, where there is no shell to hear from.
+ */
+export async function onBackendFailed(
+  handler: (reason: string) => void,
+): Promise<() => void> {
+  if (!isDesktop()) return () => {};
+  try {
+    const { listen } = await import("@tauri-apps/api/event");
+    return await listen<string>("backend-failed", (event) => handler(event.payload));
+  } catch {
+    return () => {};
+  }
+}
+
+/**
+ * Ask the OS for a folder.
+ *
+ * Returns null when the user cancels, and also in a browser — there is no way
+ * to get a real filesystem path from a web page, so the caller keeps its text
+ * field as the way in rather than pretending the button is missing.
+ */
+export async function pickFolder(title: string): Promise<string | null> {
+  if (!isDesktop()) return null;
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const picked = await open({ directory: true, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}
+
 export const windowControls = {
   minimize: async () => {
     if (isDesktop()) await (await appWindow()).minimize();
