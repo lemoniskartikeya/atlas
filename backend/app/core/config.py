@@ -93,11 +93,56 @@ class Settings(BaseSettings):
     google_client_secret: Optional[str] = None
 
     # --------------------------------------------------------------- email OTP
-    # Transactional email, for verification codes. The key lives on the server
-    # only; the desktop client never holds it and never sends mail itself.
+    # Transactional email, for verification codes. Credentials live on the
+    # server only; the desktop client never holds them and never sends mail.
+    #
+    # Two ways to deliver. "auto" (the default) picks whichever is configured,
+    # preferring SMTP — so setting the SMTP variables is enough, with no second
+    # switch to remember. Set explicitly to pin one.
+    email_provider: str = "auto"  # "auto" | "smtp" | "resend"
+
+    #: SMTP. Works with an ordinary mailbox (e.g. a Gmail App Password), so it
+    #: needs no paid plan and no domain of your own.
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    #: STARTTLS on 587 (the usual case); implicit TLS is used for port 465.
+    smtp_starttls: bool = True
+
+    #: Resend. Free to a point, but only delivers to arbitrary recipients once
+    #: you have verified a domain you own.
     resend_api_key: Optional[str] = None
+
     email_from: Optional[str] = None
     email_from_name: str = "Atlas"
+
+    def smtp_configured(self) -> bool:
+        return bool(
+            (self.smtp_host or "").strip()
+            and (self.smtp_user or "").strip()
+            and (self.smtp_password or "").strip()
+        )
+
+    def resend_configured(self) -> bool:
+        return bool((self.resend_api_key or "").strip())
+
+    def active_email_provider(self) -> Optional[str]:
+        """Which sender will actually be used, or None if nothing can send.
+
+        An address to send *from* is required either way: SMTP falls back to
+        the login user, Resend has nothing to fall back to.
+        """
+        choice = (self.email_provider or "auto").strip().lower()
+        if choice == "smtp":
+            return "smtp" if self.smtp_configured() else None
+        if choice == "resend":
+            return "resend" if self.resend_configured() and (self.email_from or "").strip() else None
+        if self.smtp_configured():
+            return "smtp"
+        if self.resend_configured() and (self.email_from or "").strip():
+            return "resend"
+        return None
 
     #: Requests per address, and the enforced quiet period between them.
     otp_per_email_per_hour: int = 5

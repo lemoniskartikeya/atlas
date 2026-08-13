@@ -1,15 +1,22 @@
 """Transactional email.
 
-Resend over plain HTTPS, mirroring how the coach's providers talk to their
-APIs: no SDK, no new dependency beyond the httpx the backend already carries.
+Two ways out, chosen by configuration:
 
-The API key lives only here, on the server. The desktop client never sees it,
-never sends mail itself, and has no way to ask for it — every message goes
-Desktop -> Atlas backend -> Resend -> mailbox.
+* **SMTP** (stdlib `smtplib`) — works with an ordinary mailbox such as Gmail
+  with an App Password. Free, and needs no domain of your own, which makes it
+  the sensible default for a personal desktop app.
+* **Resend** over plain HTTPS, mirroring how the coach's providers talk to
+  their APIs: no SDK, no dependency beyond the httpx the backend already has.
+  Free to a point, but only reaches arbitrary recipients once you have verified
+  a domain you own.
 
-When no provider is configured this raises. It deliberately does **not**
-pretend to have sent something: a silent no-op would leave a user staring at an
-inbox waiting for a code that was never going to arrive.
+Credentials live only here, on the server. The desktop client never sees them,
+never sends mail itself, and has no way to ask for them — every message goes
+Desktop -> Atlas backend -> provider -> mailbox.
+
+When nothing is configured this raises. It deliberately does **not** pretend to
+have sent something: a silent no-op would leave a user staring at an inbox
+waiting for a code that was never going to arrive.
 """
 from __future__ import annotations
 
@@ -26,9 +33,11 @@ RESEND_ENDPOINT = "https://api.resend.com/emails"
 _TIMEOUT = 20.0
 
 SETUP_HINT = (
-    "Email isn't configured yet. Create an API key at resend.com/api-keys, then "
-    "set ATLAS_RESEND_API_KEY and ATLAS_EMAIL_FROM in backend/.env and restart "
-    "Atlas. See .env.example."
+    "Email isn't configured yet. The free route is SMTP with an ordinary "
+    "mailbox: for Gmail, turn on 2-Step Verification, create an App Password at "
+    "myaccount.google.com/apppasswords, then set ATLAS_SMTP_HOST=smtp.gmail.com, "
+    "ATLAS_SMTP_USER and ATLAS_SMTP_PASSWORD in backend/.env and restart Atlas. "
+    "See .env.example."
 )
 
 
@@ -49,23 +58,100 @@ class EmailMessage:
 
 
 def is_configured() -> bool:
+    return get_settings().active_email_provider() is not None
+
+
+def _from_address() -> str:
+    """The bare address mail is sent from.
+
+    SMTP falls back to the login user, because a mailbox almost always has to
+    send as itself — Gmail silently rewrites anything else, so making people
+    set a second variable that is ignored would be a trap.
+    """
     settings = get_settings()
-    return bool((settings.resend_api_key or "").strip() and (settings.email_from or "").strip())
+    explicit = (settings.email_from or "").strip()
+    if explicit:
+        return explicit
+    return (settings.smtp_user or "").strip()
 
 
 def _sender() -> str:
-    """Resend accepts either `you@domain` or `Name <you@domain>`."""
-    settings = get_settings()
-    address = (settings.email_from or "").strip()
-    name = (settings.email_from_name or "").strip()
+    """`Name <you@domain>` when a display name is set, else the bare address."""
+    address = _from_address()
+    name = (get_settings().email_from_name or "").strip()
     return f"{name} <{address}>" if name else address
 
 
 def send(message: EmailMessage) -> None:
-    """Deliver one message, or raise something the caller can explain."""
-    if not is_configured():
-        raise EmailNotConfigured(SETUP_HINT)
+    """Deliver one message, or raise something the caller can explain.
 
+    The only entry point. Callers never choose a provider — that is settled by
+    configuration here, so adding a third one later touches nothing upstream.
+    """
+    provider = get_settings().active_email_provider()
+    if provider is None:
+        raise EmailNotConfigured(SETUP_HINT)
+    if provider == "smtp":
+        _send_smtp(message)
+    else:
+        _send_resend(message)
+
+
+# --------------------------------------------------------------------- SMTP
+def _send_smtp(message: EmailMessage) -> None:
+    """Send through an ordinary mailbox. Free, and needs no domain of your own.
+
+    Uses the standard library: no dependency, and nothing new in the packaged
+    sidecar. A single multipart/alternative message carries both the plain-text
+    and HTML parts, which is what mail clients and spam filters expect.
+    """
+    import smtplib
+    import ssl
+    from email.message import EmailMessage as MimeMessage
+
+    settings = get_settings()
+
+    mime = MimeMessage()
+    mime["Subject"] = message.subject
+    mime["From"] = _sender()
+    mime["To"] = message.to
+    mime.set_content(message.text_body)
+    mime.add_alternative(message.html_body, subtype="html")
+
+    context = ssl.create_default_context()
+    try:
+        # 465 is implicit TLS; 587 connects in the clear and upgrades. Getting
+        # this backwards is the most common cause of a hang rather than an error.
+        if settings.smtp_port == 465:
+            server = smtplib.SMTP_SSL(
+                settings.smtp_host, settings.smtp_port, timeout=_TIMEOUT, context=context
+            )
+        else:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=_TIMEOUT)
+
+        with server:
+            if settings.smtp_port != 465 and settings.smtp_starttls:
+                server.starttls(context=context)
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(mime)
+    except smtplib.SMTPAuthenticationError as exc:
+        raise EmailSendError(
+            "The mail server rejected those credentials. For Gmail you need an "
+            "App Password (16 characters, 2-Step Verification on) — your normal "
+            "account password will not work."
+        ) from exc
+    except smtplib.SMTPRecipientsRefused as exc:
+        raise EmailSendError(f"The mail server refused the recipient {message.to}.") from exc
+    except (smtplib.SMTPException, OSError) as exc:
+        # Covers connection refused, DNS failure, timeouts and TLS mismatches.
+        # str(exc) never contains the password — smtplib does not echo it.
+        raise EmailSendError(f"Couldn't send through {settings.smtp_host}: {exc}") from exc
+
+    log.info("email.sent", extra={"to": message.to, "via": "smtp", "subject": message.subject})
+
+
+# ------------------------------------------------------------------- Resend
+def _send_resend(message: EmailMessage) -> None:
     import httpx
 
     settings = get_settings()
@@ -99,7 +185,12 @@ def send(message: EmailMessage) -> None:
     # dashboard. The code itself is never in scope here.
     log.info(
         "email.sent",
-        extra={"to": message.to, "id": (res.json() or {}).get("id"), "subject": message.subject},
+        extra={
+            "to": message.to,
+            "via": "resend",
+            "id": (res.json() or {}).get("id"),
+            "subject": message.subject,
+        },
     )
 
 

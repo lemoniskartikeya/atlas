@@ -368,13 +368,17 @@ def test_requesting_again_retires_the_previous_code(client, outbox, relaxed):
 # ------------------------------------------------------- provider not set up
 def test_an_unconfigured_provider_fails_loudly(client, monkeypatch):
     """Never pretend mail was sent — the user would wait on an empty inbox."""
-    monkeypatch.setattr(get_settings(), "resend_api_key", None)
-    monkeypatch.setattr(get_settings(), "email_from", None)
+    settings = get_settings()
+    monkeypatch.setattr(settings, "resend_api_key", None)
+    monkeypatch.setattr(settings, "email_from", None)
+    monkeypatch.setattr(settings, "smtp_host", None)
 
     res = _send(client)
     assert res.status_code == 503
     detail = res.json()["detail"]
-    assert "resend.com" in detail and "ATLAS_RESEND_API_KEY" in detail
+    # Points at the free route first: it needs no paid plan and no domain.
+    assert "ATLAS_SMTP_HOST" in detail
+    assert "App Password" in detail
 
 
 def test_a_failed_send_leaves_no_code_to_verify_against(client, monkeypatch):
