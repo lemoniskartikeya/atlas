@@ -24,6 +24,7 @@ from app.api.v1 import (
     ml_history,
     notifications,
     obsidian,
+    otp,
     planner,
     predictions,
     review,
@@ -93,6 +94,7 @@ def create_app() -> FastAPI:
     for router in (
         auth.router,
         google.router,
+        otp.router,
         calendar.router,
         jobs.router,
         ml_history.router,

@@ -92,6 +92,39 @@ class Settings(BaseSettings):
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
 
+    # --------------------------------------------------------------- email OTP
+    # Transactional email, for verification codes. The key lives on the server
+    # only; the desktop client never holds it and never sends mail itself.
+    resend_api_key: Optional[str] = None
+    email_from: Optional[str] = None
+    email_from_name: str = "Atlas"
+
+    #: Requests per address, and the enforced quiet period between them.
+    otp_per_email_per_hour: int = 5
+    otp_resend_cooldown_seconds: int = 60
+    #: Ceiling per caller address, so one machine cannot farm codes across many
+    #: mailboxes even while each individual address stays under its own limit.
+    otp_per_ip_per_hour: int = 15
+
+    #: Answer "unknown address" and "already registered" with the same neutral
+    #: response, hiding which addresses have accounts. Off by default because
+    #: the product's sign-in flow tells the user which of the two applies.
+    otp_neutral_responses: bool = False
+
+    #: Development only: return the code in the API response instead of relying
+    #: on a mailbox. Ignored unless `env` is exactly "development" — see
+    #: `otp_echo_allowed()`, which is the only thing that should read this.
+    otp_dev_echo: bool = False
+
+    def otp_echo_allowed(self) -> bool:
+        """Whether a code may be handed back to the caller.
+
+        Two independent conditions, both required, and the environment check is
+        not something a stray env var can flip on a deployed instance: setting
+        ATLAS_OTP_DEV_ECHO=true in production does nothing at all.
+        """
+        return self.otp_dev_echo and self.env.strip().lower() == "development"
+
     # AI coach (opt-in). With no key the coach runs fully offline, answering from
     # the user's own numbers. Configuring a provider sends a compact digest of
     # that data to whoever it names — except "ollama", which is a model running

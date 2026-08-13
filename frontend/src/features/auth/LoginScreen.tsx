@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Check, Eye, EyeOff, X } from "lucide-react";
 import { AtlasMark } from "@/components/ui/atlas-mark";
 import { GoogleSignIn } from "./GoogleSignIn";
+import { EmailOtpSignIn } from "./EmailOtpSignIn";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,11 @@ export function LoginScreen() {
       setBusy(false);
     }
   };
+
+  // Both passwordless paths end the same way: the backend already minted a
+  // session, so this only has to adopt it.
+  const adoptToken = (token: string) =>
+    void signInWithToken(token).catch((e) => setError((e as Error).message ?? String(e)));
 
   const swap = (next: "signin" | "signup") => {
     setMode(next);
@@ -207,8 +213,9 @@ export function LoginScreen() {
           </Button>
         </form>
 
-        <div className="mt-4">
-          <GoogleSignIn onToken={(token) => void signInWithToken(token).catch((e) => setError(String(e.message ?? e)))} />
+        <div className="mt-4 space-y-4">
+          <EmailOtpSignIn mode={mode} onToken={adoptToken} />
+          <GoogleSignIn onToken={adoptToken} />
         </div>
 
         {!needsSetup && (

@@ -100,3 +100,58 @@ def hash_token(token: str) -> str:
 
 def session_expiry(now: datetime | None = None) -> datetime:
     return (now or datetime.now(timezone.utc)) + SESSION_TTL
+
+
+# ------------------------------------------------------------------ email OTP
+OTP_LENGTH = 6
+OTP_TTL = timedelta(minutes=10)
+#: Wrong guesses allowed against one code before it is burned.
+OTP_MAX_ATTEMPTS = 5
+
+
+def new_otp() -> str:
+    """A cryptographically secure 6-digit code.
+
+    `secrets.randbelow` over the whole range, not six independent digits —
+    the latter is equivalent here but invites an implementation that reaches
+    for `random`. Zero-padded, so "004215" is a valid code and the space is a
+    full 10**6.
+    """
+    return f"{secrets.randbelow(10**OTP_LENGTH):0{OTP_LENGTH}d}"
+
+
+def hash_otp(otp: str) -> str:
+    """Store the code the same way a password is stored: scrypt, salted.
+
+    A six-digit code has only 10**6 possibilities, so a fast digest (what we
+    use for session tokens) would be trivially reversible from a stolen
+    database — a rainbow table for the entire keyspace fits on a phone. scrypt
+    at these parameters makes enumerating the space cost tens of hours, by
+    which time the code has expired many times over. The per-record salt means
+    one table cannot cover every row.
+
+    The cost is one hash per verification attempt, and attempts are capped.
+    """
+    return hash_password(otp)
+
+
+def verify_otp(otp: str, encoded: str) -> bool:
+    """Constant-time compare. A malformed or blank stored hash fails closed."""
+    if not encoded:
+        return False
+    return verify_password(otp, encoded)
+
+
+def otp_expiry(now: datetime | None = None) -> datetime:
+    return (now or datetime.now(timezone.utc)) + OTP_TTL
+
+
+def normalize_email(email: str) -> str:
+    """Trim and lowercase — the form every lookup and rate-limit key uses.
+
+    Applied at the single point where email enters the system so that
+    " Ada@Example.COM " and "ada@example.com" can never become two accounts,
+    two rate-limit buckets, or a code issued to one and checked against the
+    other.
+    """
+    return (email or "").strip().lower()

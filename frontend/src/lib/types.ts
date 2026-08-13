@@ -792,3 +792,22 @@ export interface GoogleResult {
   token?: string | null;
   username?: string | null;
 }
+
+/* ------------------------------------------------------------- email sign-in */
+
+export type OtpPurpose = "login" | "signup";
+
+export interface EmailStatus {
+  /** False when no mail provider is configured on the backend. */
+  email_configured: boolean;
+}
+
+export interface SendOtpResponse {
+  email: string;
+  purpose: OtpPurpose;
+  detail: string;
+  expires_in_seconds: number;
+  resend_in_seconds: number;
+  /** Development only; the backend returns this nowhere else. */
+  dev_code?: string | null;
+}

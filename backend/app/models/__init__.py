@@ -1,5 +1,6 @@
 """ORM models. Importing this package registers every table on ``Base.metadata``."""
 from app.models.base import Base, OwnedMixin
+from app.models.email_verification import EmailVerification, VerificationPurpose
 from app.models.feedback import RecommendationOutcome
 from app.models.focus import FocusSession
 from app.models.habit import Habit, HabitLog
@@ -26,6 +27,8 @@ def owned_models() -> list[type]:
 
 __all__ = [
     "AuthSession",
+    "EmailVerification",
+    "VerificationPurpose",
     "Base",
     "OwnedMixin",
     "owned_models",

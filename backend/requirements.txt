@@ -8,7 +8,9 @@ pydantic~=2.7
 pydantic-settings~=2.3
 python-dateutil~=2.9
 alembic~=1.13
+# Runtime, not just tests: the AI coach's providers and the transactional
+# email sender both speak plain HTTP rather than pulling in an SDK each.
+httpx~=0.27
 
 # --- tests ---
-httpx~=0.27
 pytest~=8.2

@@ -33,6 +33,12 @@ class User(UUIDMixin, TimestampMixin, Base):
     google_sub: Mapped[Optional[str]] = mapped_column(
         String(64), unique=True, index=True, default=None
     )
+    #: Set when the address was proven by entering a code sent to it (or by
+    #: Google vouching for it). Null means "we have an address on file but
+    #: nobody has shown they can read that mailbox".
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
     )

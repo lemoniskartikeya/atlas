@@ -5,10 +5,13 @@ import type {
   CoachMessage,
   CoachResponse,
   CoachStatus,
+  EmailStatus,
   GoogleConfigStatus,
   GoogleResult,
   GoogleStartResponse,
   KeyTestResult,
+  OtpPurpose,
+  SendOtpResponse,
   ObsidianSyncResult,
   ObsidianVaultCheck,
   CorrelationsResponse,
@@ -126,6 +129,18 @@ export const api = {
     http<void>("/auth/change-password", {
       method: "POST",
       body: JSON.stringify({ current_password, new_password }),
+    }),
+
+  emailStatus: () => http<EmailStatus>("/auth/email-status"),
+  sendOtp: (email: string, purpose: OtpPurpose) =>
+    http<SendOtpResponse>("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, purpose }),
+    }),
+  verifyOtp: (email: string, code: string, purpose: OtpPurpose) =>
+    http<AuthResponse>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code, purpose }),
     }),
 
   googleStatus: () => http<GoogleConfigStatus>("/auth/google/status"),
