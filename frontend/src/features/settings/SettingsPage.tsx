@@ -9,6 +9,8 @@ import { decryptBackup, downloadText, encryptBackup, isEncryptedBackup } from "@
 import { todayISO } from "@/lib/utils";
 import type { BackupDoc, BackupResult } from "@/lib/types";
 import { CoachKeyCard } from "./CoachKeyCard";
+import { EffectsToggle } from "./EffectsToggle";
+import { ObsidianCard } from "./ObsidianCard";
 import { DesktopCard } from "./DesktopCard";
 import { LearningCard } from "./LearningCard";
 
@@ -123,12 +125,17 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
         </CardHeader>
-        <CardBody className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-ink">Theme</div>
-            <div className="text-[12px] text-ink-muted">Light, dark, or match your system.</div>
+        <CardBody className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-ink">Theme</div>
+              <div className="text-[12px] text-ink-muted">Light, dark, or match your system.</div>
+            </div>
+            <ThemeToggle />
           </div>
-          <ThemeToggle />
+          <div className="border-t border-border/10 pt-3">
+            <EffectsToggle />
+          </div>
         </CardBody>
       </Card>
 
@@ -137,6 +144,8 @@ export function SettingsPage() {
       <DesktopCard />
 
       <CoachKeyCard />
+
+      <ObsidianCard />
 
       <Card>
         <CardHeader>

@@ -756,3 +756,20 @@ export interface WeeklyReview {
   focus: string[];
   narrative: string;
 }
+
+export interface ObsidianVaultCheck {
+  exists: boolean;
+  is_vault: boolean;
+  detail: string;
+}
+
+export interface ObsidianSyncResult {
+  exported: number;
+  imported: number;
+  updated_in_atlas: number;
+  /** Left alone because the vault's copy was newer. */
+  skipped: number;
+  /** Human-readable notes about anything that changed in both places. */
+  conflicts: string[];
+  vault_path: string;
+}

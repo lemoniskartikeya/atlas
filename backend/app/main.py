@@ -22,6 +22,7 @@ from app.api.v1 import (
     journal,
     ml_history,
     notifications,
+    obsidian,
     planner,
     predictions,
     review,
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
         coach.router,
         focus.router,
         backup.router,
+        obsidian.router,
     ):
         app.include_router(router, prefix=API_PREFIX)
 

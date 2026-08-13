@@ -6,6 +6,8 @@ import type {
   CoachResponse,
   CoachStatus,
   KeyTestResult,
+  ObsidianSyncResult,
+  ObsidianVaultCheck,
   CorrelationsResponse,
   Dashboard,
   FocusSession,
@@ -216,6 +218,17 @@ export const api = {
     http<CoachResponse>("/coach/ask", {
       method: "POST",
       body: JSON.stringify({ messages, use_ai: useAi }),
+    }),
+
+  checkObsidianVault: (vault_path: string) =>
+    http<ObsidianVaultCheck>("/obsidian/check", {
+      method: "POST",
+      body: JSON.stringify({ vault_path }),
+    }),
+  syncObsidian: (vault_path: string) =>
+    http<ObsidianSyncResult>("/obsidian/sync", {
+      method: "POST",
+      body: JSON.stringify({ vault_path }),
     }),
 
   search: (q: string, limit = 8) =>
