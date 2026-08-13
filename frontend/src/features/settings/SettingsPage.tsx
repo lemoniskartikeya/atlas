@@ -1,13 +1,20 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, Download, Lock, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Download,
+  FileSpreadsheet,
+  Lock,
+  Upload,
+} from "lucide-react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { api } from "@/lib/api";
 import { decryptBackup, downloadText, encryptBackup, isEncryptedBackup } from "@/lib/backup";
 import { todayISO } from "@/lib/utils";
-import type { BackupDoc, BackupResult } from "@/lib/types";
+import type { BackupDoc, BackupResult, CsvDataset } from "@/lib/types";
 import { CoachKeyCard } from "./CoachKeyCard";
 import { EffectsToggle } from "./EffectsToggle";
 import { ObsidianCard } from "./ObsidianCard";
@@ -185,6 +192,8 @@ export function SettingsPage() {
         </CardBody>
       </Card>
 
+      <SpreadsheetCard />
+
       <Card>
         <CardHeader>
           <CardTitle>Restore</CardTitle>
@@ -265,5 +274,69 @@ export function SettingsPage() {
         browser — Atlas can't recover it, so store it somewhere safe.
       </p>
     </div>
+  );
+}
+
+/**
+ * The same data, as spreadsheets.
+ *
+ * Separate from the backup above because it answers a different question: that
+ * one is for putting your data back, this one is for looking at it somewhere
+ * else. The list comes from the backend so the two can't drift apart.
+ */
+function SpreadsheetCard() {
+  const [datasets, setDatasets] = useState<CsvDataset[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .csvDatasets()
+      .then((r) => setDatasets(r.datasets))
+      .catch(() => setDatasets([]));
+  }, []);
+
+  const download = async (key: string) => {
+    setBusy(key);
+    setError(null);
+    try {
+      downloadText(`atlas-${key}-${todayISO()}.csv`, await api.csvExport(key));
+    } catch {
+      setError("That export failed. Try again.");
+    }
+    setBusy(null);
+  };
+
+  if (datasets.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Spreadsheets</CardTitle>
+        <FileSpreadsheet size={15} className="text-accent" />
+      </CardHeader>
+      <CardBody className="space-y-2.5">
+        <p className="text-sm text-ink-muted">
+          Your data as CSV, for a spreadsheet or anything else that reads one.
+        </p>
+        {datasets.map((d) => (
+          <div key={d.key} className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-medium text-ink">{d.label}</div>
+              <p className="text-[11px] leading-relaxed text-ink-faint">{d.description}</p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => void download(d.key)}
+              disabled={busy !== null}
+            >
+              <Download size={14} />
+              {busy === d.key ? "…" : "CSV"}
+            </Button>
+          </div>
+        ))}
+        {error && <p className="text-[12px] text-danger">{error}</p>}
+      </CardBody>
+    </Card>
   );
 }

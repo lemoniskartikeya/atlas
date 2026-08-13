@@ -428,6 +428,13 @@ export interface Insight {
   tone: "good" | "watch" | "neutral";
 }
 
+export interface CsvDataset {
+  key: string;
+  label: string;
+  description: string;
+  columns: string[];
+}
+
 export interface BehaviourTrait {
   key: string;
   summary: string;

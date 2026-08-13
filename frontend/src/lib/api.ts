@@ -16,6 +16,7 @@ import type {
   ObsidianVaultCheck,
   CorrelationsResponse,
   BehaviourProfile,
+  CsvDataset,
   InsightsResponse,
   Dashboard,
   FocusSession,
@@ -191,6 +192,16 @@ export const api = {
   analyticsWeekly: (weeks = 12) => http<WeeklyResponse>(`/analytics/weekly?weeks=${weeks}`),
   analyticsCorrelations: (days = 90) =>
     http<CorrelationsResponse>(`/analytics/correlations?days=${days}`),
+  csvDatasets: () => http<{ datasets: CsvDataset[] }>("/backup/csv"),
+  /** The sheet itself. Text rather than JSON, so it doesn't go through http<T>. */
+  csvExport: async (dataset: string): Promise<string> => {
+    const token = session.get();
+    const res = await fetch(`${BASE}/backup/csv/${dataset}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return res.text();
+  },
   behaviourProfile: () => http<BehaviourProfile>("/analytics/profile"),
   analyticsInsights: (days = 365) =>
     http<InsightsResponse>(`/analytics/insights?days=${days}`),

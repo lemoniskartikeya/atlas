@@ -15,3 +15,14 @@ class BackupImport(BaseModel):
 class BackupResult(BaseModel):
     imported: dict[str, int]
     total: int
+
+
+class CsvDataset(BaseModel):
+    key: str
+    label: str
+    description: str
+    columns: list[str]
+
+
+class CsvDatasets(BaseModel):
+    datasets: list[CsvDataset]
