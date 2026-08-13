@@ -102,6 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session.clear();
     setUser(null);
     qc.clear();
+    // Per-account preferences must not carry over to whoever signs in next.
+    // The theme deliberately stays: that is a property of this machine's
+    // display, not of the person using it.
+    localStorage.removeItem("atlas-desktop-alerts");
   }, [qc]);
 
   const value = useMemo(

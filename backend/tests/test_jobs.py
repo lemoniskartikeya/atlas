@@ -43,8 +43,15 @@ def test_job_becomes_due_again_after_its_interval(db_session):
     assert JobRunner(db_session).due(job, datetime.now(timezone.utc)) is True
 
 
-def test_due_is_computed_from_persisted_history(db_session):
+def test_due_is_computed_from_persisted_history(db_session, monkeypatch):
     """A desktop app restarts constantly; an in-memory timer would forget."""
+    import app.services.jobs as jobs
+
+    # Pin a trained model so this exercises the weekly cadence. Without one the
+    # job deliberately re-checks every few hours (see the first-model tests
+    # below), and a run a day ago would legitimately be due again.
+    monkeypatch.setattr(jobs, "_model_exists", lambda session: True)
+
     job = JOBS_BY_ID["retrain_model"]
     _record(db_session, job.id, days_ago=1)
     # A brand-new runner (i.e. a fresh process) still sees the earlier run.
@@ -184,3 +191,67 @@ def test_manual_run_is_recorded(client):
 
 def test_unknown_job_404s(client):
     assert client.post(f"{BASE}/jobs/nope/run").status_code == 404
+
+
+# ------------------------------------------------- first-model responsiveness
+#
+# A new account's very first retrain attempt runs within minutes of signing up,
+# finds too little history and records a skip. On the plain weekly cadence that
+# skip would push the next look a full week out, so someone logging diligently
+# through their first fortnight would still have every smart feature switched
+# off, with nothing on screen explaining why. Until a model exists the job has
+# to lean in.
+def test_retrain_is_checked_often_while_no_model_exists(db_session, monkeypatch):
+    import app.services.jobs as jobs
+
+    monkeypatch.setattr(jobs, "_model_exists", lambda session: False)
+    job = JOBS_BY_ID["retrain_model"]
+    runner = JobRunner(db_session)
+
+    assert runner.interval_for(job) == jobs.FIRST_MODEL_CHECK_INTERVAL
+    assert runner.interval_for(job) < job.interval
+
+    # Skipped four hours ago: on the weekly cadence this would still be days
+    # away, but with no model yet it is due again.
+    _record(db_session, job.id, days_ago=4 / 24, status="skipped")
+    assert runner.due(job, datetime.now(timezone.utc)) is True
+
+
+def test_retrain_settles_into_its_weekly_rhythm_once_trained(db_session, monkeypatch):
+    import app.services.jobs as jobs
+
+    monkeypatch.setattr(jobs, "_model_exists", lambda session: True)
+    job = JOBS_BY_ID["retrain_model"]
+    runner = JobRunner(db_session)
+
+    assert runner.interval_for(job) == job.interval
+
+    _record(db_session, job.id, days_ago=4 / 24, status="ok")
+    assert runner.due(job, datetime.now(timezone.utc)) is False
+
+
+def test_a_broken_cadence_hint_never_blocks_the_job(db_session, monkeypatch):
+    """A hint is an optimisation; if it raises, fall back to the plain interval."""
+    job = JOBS_BY_ID["retrain_model"]
+
+    def boom(_session):
+        raise RuntimeError("registry unreadable")
+
+    monkeypatch.setattr(job, "interval_fn", boom)
+    assert JobRunner(db_session).interval_for(job) == job.interval
+
+
+def test_the_wait_is_explained_in_plain_language(db_session, monkeypatch):
+    """The skip a beginner sees must say what to do, not name an ML concept."""
+    import app.services.jobs as jobs
+
+    monkeypatch.setattr(
+        jobs, "_train_model", lambda session: {"trained": False, "n_samples": 12}
+    )
+    result = retrain_model(db_session)
+
+    assert result.status == "skipped"
+    assert "12" in result.detail
+    assert "nothing for you to do" in result.detail.lower()
+    for jargon in ("outcome", "sample", "roc", "feature"):
+        assert jargon not in result.detail.lower(), f"jargon leaked: {jargon}"

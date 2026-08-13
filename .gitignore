@@ -48,3 +48,6 @@ exports/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Published installer (build artifact)
+/release/
