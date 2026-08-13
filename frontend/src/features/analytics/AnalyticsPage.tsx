@@ -14,6 +14,8 @@ import {
 import { cn, pct } from "@/lib/utils";
 import type { CorrelationPair } from "@/lib/types";
 import { WeeklyReviewCard } from "./WeeklyReviewCard";
+import { HeatmapCard, StreaksCard, WellbeingCard } from "@/features/dashboard/widgets";
+import { useDashboard } from "@/hooks/queries";
 
 const WD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -73,6 +75,9 @@ export function AnalyticsPage() {
   const { data: weekly } = useAnalyticsWeekly(12);
   const { data: corr } = useAnalyticsCorrelations(90);
   const { data: heat } = useHeatmap(365);
+  // Wellbeing and streaks moved off the dashboard; they are retrospective,
+  // and this is where you come to look back.
+  const { data: dash } = useDashboard();
 
   if (!s) return <AnalyticsSkeleton />;
 
@@ -86,6 +91,8 @@ export function AnalyticsPage() {
       </div>
 
       <WeeklyReviewCard />
+
+      <HeatmapCard />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiTile label="Completions" value={s.total_completions} />
@@ -101,6 +108,13 @@ export function AnalyticsPage() {
         <KpiTile label="Active habits" value={s.active_habits} />
         <KpiTile label="Journal days" value={s.journal_entries} />
       </div>
+
+      {dash && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <WellbeingCard mood={dash.mood} energy={dash.energy} sleep={dash.sleep_hours} />
+          <StreaksCard streaks={dash.top_streaks} />
+        </div>
+      )}
 
       <Card>
         <CardHeader>

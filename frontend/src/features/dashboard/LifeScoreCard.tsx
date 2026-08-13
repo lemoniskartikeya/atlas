@@ -142,12 +142,12 @@ export function LifeScoreCard({ d }: { d: Dashboard }) {
 
       {points.length > 1 && (
         <div className="mt-5 border-t border-border/10 pt-4">
-          <div className="mb-1 flex items-baseline justify-between">
+          {/* No "hover for details" hint: the whole plot is the hit target, and
+              anyone who moves the pointer over it finds that out immediately.
+              A label explaining an interaction costs more than it teaches. */}
+          <div className="mb-1">
             <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted">
               Trend
-            </span>
-            <span className="text-[11px] text-ink-faint">
-              hover anywhere for that day's reading
             </span>
           </div>
           <LineChart

@@ -78,9 +78,8 @@ export function ObsidianCard() {
       </CardHeader>
       <CardBody className="space-y-3">
         <p className="text-sm text-ink-muted">
-          Keep your journal and notes in an Obsidian vault as plain Markdown. Atlas writes into an{" "}
-          <code>Atlas</code> folder inside the vault and reads back anything you change there —
-          nothing else in the vault is touched.
+          Journal and notes as plain Markdown in an <code>Atlas</code> folder inside your vault.
+          Two-way; nothing else in the vault is touched.
         </p>
 
         <div className="flex gap-2">
@@ -143,9 +142,8 @@ export function ObsidianCard() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <p className="text-[11px] leading-relaxed text-ink-faint">
-          When the same entry changed in both places, the most recent edit wins and the other is
-          reported above rather than discarded quietly. Sync runs when you ask it to — nothing
-          watches your files in the background.
+          If both sides changed, the newer edit wins and the other is reported above. Runs only
+          when you ask.
         </p>
       </CardBody>
     </Card>

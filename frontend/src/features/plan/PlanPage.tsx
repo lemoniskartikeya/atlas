@@ -16,6 +16,7 @@ import { useCompleteTask, useLogHabit, usePlan, useUnlogHabit } from "@/hooks/qu
 import { cn, formatLongDate, todayISO } from "@/lib/utils";
 import type { PlanBlock, PlanItem } from "@/lib/types";
 import { PlanOutlook } from "./PlanOutlook";
+import { ForecastCard } from "@/features/dashboard/ForecastCard";
 import { HabitSimulator } from "./HabitSimulator";
 
 const BLOCK_ICON: Record<string, LucideIcon> = {
@@ -229,6 +230,8 @@ export function PlanPage() {
       </Card>
 
       <PlanOutlook />
+
+      <ForecastCard />
 
       {plan.blocks.length === 0 ? (
         <Card className="p-8 text-center">

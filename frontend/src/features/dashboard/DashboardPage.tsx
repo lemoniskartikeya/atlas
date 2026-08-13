@@ -7,15 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "@/hooks/queries";
 import { useAuth } from "@/features/auth/AuthContext";
 import { formatLongDate } from "@/lib/utils";
-import {
-  HeatmapCard,
-  RecommendationsCard,
-  StreaksCard,
-  TasksTodayCard,
-  TodayHabitsCard,
-  WellbeingCard,
-} from "./widgets";
-import { ForecastCard } from "./ForecastCard";
+import { RecommendationsCard, TasksTodayCard, TodayHabitsCard } from "./widgets";
 import { LifeScoreCard } from "./LifeScoreCard";
 
 /** One band of the page. Bands enter in sequence rather than all at once. */
@@ -127,11 +119,10 @@ export function DashboardPage() {
         <LifeScoreCard d={d} />
       </Section>
 
+      {/* What today actually asks of you, and one short list of nudges. The
+          retrospective views — heatmap, streaks, wellbeing, forecast — moved to
+          Analytics and Plan, where you go to look back rather than to act. */}
       <Section i={2}>
-        <HeatmapCard />
-      </Section>
-
-      <Section i={3}>
         <div className="grid gap-4 lg:grid-cols-12">
           <div className="space-y-4 lg:col-span-7">
             <TodayHabitsCard
@@ -145,20 +136,12 @@ export function DashboardPage() {
               openCount={d.tasks_open}
             />
           </div>
-          <div className="space-y-4 lg:col-span-5">
-            <ForecastCard />
+          <div className="lg:col-span-5">
             <RecommendationsCard
               recs={d.recommendations}
               modelBacked={d.recommendations_model_backed}
             />
           </div>
-        </div>
-      </Section>
-
-      <Section i={4}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <WellbeingCard mood={d.mood} energy={d.energy} sleep={d.sleep_hours} />
-          <StreaksCard streaks={d.top_streaks} />
         </div>
       </Section>
     </div>

@@ -200,8 +200,7 @@ export function CoachKeyCard() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <p className="text-[11px] leading-relaxed text-ink-faint">
-          {privacyNote} Keys are stored in <code>backend/.env</code> on this machine, one per
-          provider, and never committed.
+          {privacyNote} Keys stay on this machine.
         </p>
       </CardBody>
     </Card>

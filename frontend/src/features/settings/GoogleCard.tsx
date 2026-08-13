@@ -68,10 +68,8 @@ export function GoogleCard() {
         </div>
 
         <p className="text-sm text-ink-muted">
-          Atlas can't include a Google client ID: it belongs to your own Google Cloud project, and
-          anything shipped inside the app could be read out of it. Create an OAuth client of type{" "}
-          <strong className="text-ink">Desktop app</strong> (or Web application) and paste its ID
-          here.
+          Atlas can't ship a client ID — anything inside the app can be read out of it. Create an
+          OAuth client (<strong className="text-ink">Desktop app</strong>) and paste its ID here.
         </p>
 
         <div className="glass-inset space-y-1.5 rounded-xl p-3">
@@ -122,10 +120,8 @@ export function GoogleCard() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <p className="text-[11px] leading-relaxed text-ink-faint">
-          Sign-in opens your real browser, never a window inside Atlas — that way you can see the
-          address bar and check who is asking for your password. Google accounts are matched on
-          Google's own account id, not the email address, so changing your address later doesn't
-          strand your vault.
+          Sign-in opens your real browser, so you can see who's asking. Accounts match on Google's
+          account id, not your email address.
         </p>
       </CardBody>
     </Card>
