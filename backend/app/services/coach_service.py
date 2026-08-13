@@ -27,6 +27,7 @@ from app.schemas.coach import CoachMessage
 from app.services.dashboard_service import DashboardService
 from app.services.habit_service import HabitService
 from app.services.llm import ChatMessage, LLMError, Provider, get_provider, provider_catalog
+from app.services.behaviour_profile import BehaviourProfileService
 from app.services.prediction_service import PredictionService
 from app.services.review_service import WeeklyReviewService
 
@@ -165,6 +166,9 @@ class CoachService:
             "dash": DashboardService(self.session).build(today),
             "pred": PredictionService(self.session).build(today),
             "review": WeeklyReviewService(self.session).build(0, today),
+            # How they work in general, not just how today is going. Without
+            # this the coach can only ever answer about the last seven days.
+            "profile": BehaviourProfileService(self.session).build(today),
             "habits": list(self.habits.list_habits(include_archived=False)),
         }
 
@@ -247,6 +251,12 @@ class CoachService:
             lines.append("Watch-outs: " + ", ".join(w.title for w in r.watchouts) + ".")
         if d.recommendations:
             lines.append("Model insights: " + " ".join(rec.title.rstrip(".") + "." for rec in d.recommendations[:2]))
+        # How they work in general. Without this the coach can only ever answer
+        # about the last seven days, which makes its advice interchangeable
+        # with advice for anybody.
+        patterns = ctx["profile"].sentences()
+        if patterns:
+            lines.append("Long-run patterns: " + " ".join(patterns))
         lines.append("Habits tracked: " + ", ".join(h.title for h in ctx["habits"]) + ".")
         return "\n".join(lines)
 

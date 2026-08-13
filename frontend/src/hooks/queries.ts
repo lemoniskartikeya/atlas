@@ -187,6 +187,10 @@ export function useAnalyticsCorrelations(days = 90) {
   });
 }
 
+export function useBehaviourProfile() {
+  return useQuery({ queryKey: ["analytics", "profile"], queryFn: api.behaviourProfile });
+}
+
 export function useAnalyticsInsights(days = 365) {
   return useQuery({
     queryKey: ["analytics", "insights", days],

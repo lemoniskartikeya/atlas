@@ -99,3 +99,26 @@ class InsightsResponse(BaseModel):
     #: Empty whenever the data does not support a claim, which is the normal
     #: state of a new account. The page renders nothing rather than filler.
     insights: list[InsightOut]
+
+
+class TraitOut(BaseModel):
+    key: str
+    summary: str
+    #: What the sentence was derived from, including the sample size.
+    evidence: str
+
+
+class BehaviourProfileOut(BaseModel):
+    """Stable patterns in how someone works, as opposed to how today is going.
+
+    Empty for a new account: these need months of history, and inventing a
+    personality from three days of logs would be a horoscope.
+    """
+
+    traits: list[TraitOut] = []
+    #: Structured forms of the same facts, for callers wanting numbers.
+    peak_hours: Optional[list[int]] = None   # [start, end), local hours
+    best_weekday: Optional[int] = None       # 0 = Monday
+    worst_weekday: Optional[int] = None
+    typical_streak: Optional[int] = None
+    window_days: int

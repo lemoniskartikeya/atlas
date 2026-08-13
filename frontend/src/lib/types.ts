@@ -428,6 +428,22 @@ export interface Insight {
   tone: "good" | "watch" | "neutral";
 }
 
+export interface BehaviourTrait {
+  key: string;
+  summary: string;
+  evidence: string;
+}
+
+export interface BehaviourProfile {
+  /** Empty until the record supports a claim — the normal state early on. */
+  traits: BehaviourTrait[];
+  peak_hours: number[] | null;
+  best_weekday: number | null;
+  worst_weekday: number | null;
+  typical_streak: number | null;
+  window_days: number;
+}
+
 export interface InsightsResponse {
   generated_for: string;
   days: number;

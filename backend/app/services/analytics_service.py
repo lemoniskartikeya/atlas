@@ -116,8 +116,14 @@ class AnalyticsService:
         return HeatmapResponse(start=start, end=today, total=total, max_count=max_count, cells=cells)
 
     # ----------------------------------------------------- per-day joined frame
-    def _daily_rows(self, days: int, today: date) -> list[dict]:
-        """One row per day: habit due/done counts joined with the journal metrics."""
+    def daily_frame(self, days: int, today: date) -> list[dict]:
+        """One row per day: habit due/done counts joined with the journal metrics.
+
+        Public because it is the canonical answer to "what happened on each
+        day", and the behaviour profile needs exactly that. A second
+        implementation would eventually disagree with this one about what
+        counts as due.
+        """
         start = today - timedelta(days=days - 1)
         habits = list(self.habits.list_all(include_archived=False))
         journals = {j.date: j for j in self.journal.in_range(start, today)}
@@ -220,7 +226,7 @@ class AnalyticsService:
     # --------------------------------------------------------------- weekly
     def weekly(self, weeks: int = 12, today: Optional[date] = None) -> WeeklyResponse:
         today = today or date.today()
-        rows = self._daily_rows(weeks * 7, today)
+        rows = self.daily_frame(weeks * 7, today)
         buckets: "OrderedDict[tuple, dict]" = OrderedDict()
         for r in rows:
             iso = r["date"].isocalendar()
@@ -251,7 +257,7 @@ class AnalyticsService:
         rows rather than another walk over the logs.
         """
         today = today or date.today()
-        rows = self._daily_rows(days, today)
+        rows = self.daily_frame(days, today)
 
         # (done, due) per weekday, Monday first.
         weekday: list[list[int]] = [[0, 0] for _ in range(7)]
@@ -314,7 +320,7 @@ class AnalyticsService:
     # ---------------------------------------------------------- correlations
     def correlations(self, days: int = 90, today: Optional[date] = None) -> CorrelationsResponse:
         today = today or date.today()
-        rows = self._daily_rows(days, today)
+        rows = self.daily_frame(days, today)
         specs = [("sleep", "Sleep"), ("mood", "Mood"), ("energy", "Energy")]
 
         pairs: list[CorrelationPair] = []

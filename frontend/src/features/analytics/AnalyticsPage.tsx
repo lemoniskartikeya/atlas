@@ -15,6 +15,7 @@ import { cn, pct } from "@/lib/utils";
 import type { CorrelationPair } from "@/lib/types";
 import { WeeklyReviewCard } from "./WeeklyReviewCard";
 import { InsightsCard } from "./InsightsCard";
+import { ProfileCard } from "./ProfileCard";
 import { HeatmapCard, StreaksCard, WellbeingCard } from "@/features/dashboard/widgets";
 import { useDashboard } from "@/hooks/queries";
 
@@ -94,6 +95,8 @@ export function AnalyticsPage() {
       <WeeklyReviewCard />
 
       <InsightsCard />
+
+      <ProfileCard />
 
       <HeatmapCard />
 
