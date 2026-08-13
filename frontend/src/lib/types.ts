@@ -603,6 +603,9 @@ export interface NotificationItem {
   reason: string;
   action_label?: string | null;
   action_route?: string | null;
+  /** What can be done from the nudge itself: "complete", "defer". Empty for
+   *  informational nudges, which have nothing to act on. */
+  actions?: string[];
   read: boolean;
 }
 

@@ -1,11 +1,13 @@
 """Smart-notification endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.deps import notification_service
 from app.schemas.notification import (
     NotificationAction,
+    NotificationActRequest,
+    NotificationActResponse,
     NotificationsResponse,
     ResumeRequest,
 )
@@ -29,6 +31,30 @@ def mark_read(payload: NotificationAction, svc: NotificationService = Depends(no
 def dismiss(payload: NotificationAction, svc: NotificationService = Depends(notification_service)):
     svc.dismiss(payload.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/snooze", status_code=status.HTTP_204_NO_CONTENT)
+def snooze(payload: NotificationAction, svc: NotificationService = Depends(notification_service)):
+    """Quiet one nudge for today. Unlike dismissing, it isn't held against it."""
+    svc.snooze(payload.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/act", response_model=NotificationActResponse)
+def act(
+    payload: NotificationActRequest,
+    svc: NotificationService = Depends(notification_service),
+):
+    """Do what the nudge is about, from the nudge.
+
+    Logs the habit, or completes / defers the task. Refuses anything that
+    doesn't apply rather than reporting a success that didn't happen.
+    """
+    try:
+        detail = svc.act(payload.id, payload.action)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    return NotificationActResponse(done=True, detail=detail)
 
 
 @router.post("/read-all", status_code=status.HTTP_204_NO_CONTENT)

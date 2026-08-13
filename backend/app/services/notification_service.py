@@ -3,8 +3,13 @@
 Notifications are derived fresh from live signals (the prediction engine + open
 tasks) and *time-gated* so they arrive when they're useful — a morning brief
 early, streak-slip nudges from midday, an end-of-day wrap after 8pm. The engine
-is stateless about content; only the user's read/dismiss interaction is
-persisted, keyed by each notification's deterministic id.
+is stateless about content; only the user's interaction with it is persisted,
+keyed by each notification's deterministic id.
+
+Nudges are actionable: a streak warning can log the habit and an overdue task
+can be completed or pushed, without leaving the panel. Those actions are
+recorded too, which gives the back-off ladder a positive signal — until now it
+could only learn that a nudge was being ignored, never that it was working.
 """
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.domain.enums import HabitLogStatus
 from app.repositories.notification_repo import NotificationRepository
 from app.schemas.notification import NotificationOut, NotificationsResponse, SnoozedStream
 from app.services.prediction_service import PredictionService
@@ -82,7 +88,11 @@ class NotificationService:
 
         for n in candidates:
             status = states.get(n.id)
-            if status == "dismissed":
+            # Snoozed and acted-on nudges are done for today. Acting usually
+            # removes the underlying reason too, but not always — a deferred
+            # task is still overdue — and a nudge that reappears the instant
+            # you deal with it reads as the button having failed.
+            if status in ("dismissed", "snoozed", "acted"):
                 continue
 
             # Has this particular stream been ignored enough to go quiet?
@@ -167,14 +177,25 @@ class NotificationService:
         return self.build(today, now_hour).snoozed
 
     # -------------------------------------------------------------- mutations
-    def _classify(self, notification_id: str) -> tuple[Optional[str], Optional[str]]:
+    def _classify(
+        self,
+        notification_id: str,
+        today: Optional[date] = None,
+        now_hour: Optional[int] = None,
+    ) -> tuple[Optional[str], Optional[str]]:
         """Recover (kind, target) for an id by matching it against live candidates.
 
         Not parsed from the id: the prefix and the kind genuinely differ in
         places (``burnout:…`` is kind ``wellbeing``), and back-off groups by
         kind, so guessing would split one stream into two.
+
+        Takes the clock as arguments so a caller that already knows which
+        moment it is asking about uses that one, rather than re-reading the
+        clock and possibly landing outside the window the nudge belongs to.
         """
-        for n in self._candidates(date.today(), datetime.now().hour):
+        today = today or date.today()
+        now_hour = now_hour if now_hour is not None else datetime.now().hour
+        for n in self._candidates(today, now_hour):
             if n.id == notification_id:
                 return n.kind, n.target
         return None, None
@@ -188,6 +209,79 @@ class NotificationService:
         kind, target = self._classify(notification_id)
         self.repo.set_status(notification_id, "dismissed", kind, target)
         self.repo.commit()
+
+    def snooze(self, notification_id: str) -> None:
+        """Quiet this one nudge for the rest of today.
+
+        Distinct from dismissing on purpose. Ids embed the date, so tomorrow's
+        nudge is a different id and comes back on its own — and because only
+        dismissals count in the back-off ladder, "not now" never gets read as
+        "never again".
+        """
+        kind, target = self._classify(notification_id)
+        self.repo.set_status(notification_id, "snoozed", kind, target)
+        self.repo.commit()
+
+    def act(
+        self,
+        notification_id: str,
+        action: str,
+        today: Optional[date] = None,
+        now_hour: Optional[int] = None,
+    ) -> str:
+        """Do the thing the nudge is about, from the nudge.
+
+        Returns a sentence describing what happened. Raises ValueError when the
+        action doesn't apply — completing a morning brief means nothing, and
+        pretending otherwise would leave the user thinking something was done.
+        """
+        today = today or date.today()
+        kind, target = self._classify(notification_id, today, now_hour)
+        if kind is None or target is None:
+            raise ValueError("That notification has nothing to act on.")
+
+        if kind == "task":
+            detail = self._act_on_task(target, action, today)
+        elif kind in ("streak", "risk"):
+            detail = self._act_on_habit(target, action, today)
+        else:
+            raise ValueError(f"A {kind} notification has nothing to act on.")
+
+        # Recorded as its own status: acting is the strongest evidence a nudge
+        # was worth sending, and the back-off ladder only counts dismissals.
+        self.repo.set_status(notification_id, "acted", kind, target, action=action)
+        self.repo.commit()
+        return detail
+
+    def _act_on_task(self, task_id: str, action: str, today: date) -> str:
+        task = self.tasks.get(task_id)
+        if task is None:
+            raise ValueError("That task no longer exists.")
+
+        if action == "complete":
+            self.tasks.complete(task)
+            return f"Marked “{task.title}” done."
+        if action == "defer":
+            self.tasks.defer(task, today + timedelta(days=1))
+            overdue = " It's still past its due date." if task.due_date and task.due_date < today else ""
+            return f"Moved “{task.title}” to tomorrow.{overdue}"
+        raise ValueError(f"Can't {action} a task from a notification.")
+
+    def _act_on_habit(self, habit_id: str, action: str, today: date) -> str:
+        from app.schemas.habit import HabitLogCreate
+        from app.services.habit_service import HabitService
+
+        habits = HabitService(self.session)
+        habit = habits.get_habit(habit_id)
+        if habit is None:
+            raise ValueError("That habit no longer exists.")
+
+        if action != "complete":
+            # Habits aren't deferred: tomorrow's occurrence arrives by itself.
+            raise ValueError(f"Can't {action} a habit from a notification.")
+
+        habits.log_habit(habit, HabitLogCreate(date=today, status=HabitLogStatus.COMPLETED))
+        return f"Logged “{habit.title}” as done."
 
     def mark_all_read(
         self, today: Optional[date] = None, now_hour: Optional[int] = None
@@ -239,6 +333,7 @@ class NotificationService:
                         reason=r.reason,
                         action_label="Log it",
                         action_route="/plan",
+                        actions=["complete"],
                     )
                 )
 
@@ -261,6 +356,7 @@ class NotificationService:
                     reason="An open task is past its due date.",
                     action_label="View tasks",
                     action_route="/tasks",
+                    actions=["complete", "defer"],
                 )
             )
 

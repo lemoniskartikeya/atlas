@@ -284,6 +284,19 @@ export function useNotifRead() {
   });
 }
 
+export function useNotifSnooze() {
+  const refresh = useRefreshEverything();
+  return useMutation({ mutationFn: (id: string) => api.notifSnooze(id), onSuccess: refresh });
+}
+
+export function useNotifAct() {
+  const refresh = useRefreshEverything();
+  return useMutation({
+    mutationFn: (v: { id: string; action: string }) => api.notifAct(v.id, v.action),
+    onSuccess: refresh,
+  });
+}
+
 export function useNotifDismiss() {
   const qc = useQueryClient();
   return useMutation({

@@ -9,6 +9,10 @@ Because ids embed the date, these rows accumulate into an interaction history.
 ``kind`` and ``target`` are denormalised out of the id so that history can be
 grouped without parsing keys — which is what lets the service notice that a
 particular nudge is being ignored and back off.
+
+That history is now two-sided. A nudge can be acted on as well as ignored, and
+``action`` records which — so "you completed the run from the nudge four times
+this month" is a fact in the same table as "you dismissed it three times".
 """
 from __future__ import annotations
 
@@ -32,7 +36,13 @@ class NotificationState(UUIDMixin, TimestampMixin, OwnedMixin, Base):
     )
 
     notification_id: Mapped[str] = mapped_column(String(160), index=True)
-    status: Mapped[str] = mapped_column(String(16))  # "read" | "dismissed"
+    #: "read" | "dismissed" | "snoozed" | "acted". Only "dismissed" counts
+    #: against a stream in the back-off ladder; acting on a nudge is the
+    #: strongest evidence it was worth sending.
+    status: Mapped[str] = mapped_column(String(16))
+    #: What was actually done from the notification — "complete", "defer" —
+    #: when the status is "acted". Null for a plain read or dismissal.
+    action: Mapped[Optional[str]] = mapped_column(String(16), default=None)
     #: Notification family, e.g. "streak" | "risk" | "task" | "brief" | "eod".
     kind: Mapped[Optional[str]] = mapped_column(String(32), default=None, index=True)
     #: What it was about (usually a habit or task id); None for global nudges.

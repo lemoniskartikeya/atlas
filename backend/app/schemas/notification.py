@@ -16,6 +16,9 @@ class NotificationOut(BaseModel):
     reason: str
     action_label: Optional[str] = None
     action_route: Optional[str] = None  # in-app deep link, e.g. "/plan"
+    #: What can be done from the nudge itself, without navigating anywhere.
+    #: Empty for nudges that are only informational, like the morning brief.
+    actions: list[str] = []
     read: bool = False
     #: What the nudge is about (habit/task id). Groups a recurring nudge across
     #: days so repeated dismissals of *the same* thing can be recognised.
@@ -42,6 +45,19 @@ class NotificationsResponse(BaseModel):
 
 class NotificationAction(BaseModel):
     id: str
+
+
+class NotificationActRequest(BaseModel):
+    id: str
+    #: "complete" — log the habit / finish the task.
+    #: "defer" — push the task to tomorrow (tasks only).
+    action: str
+
+
+class NotificationActResponse(BaseModel):
+    done: bool
+    #: What happened, in the words to show the user.
+    detail: str
 
 
 class ResumeRequest(BaseModel):

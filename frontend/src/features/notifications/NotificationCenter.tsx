@@ -15,9 +15,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  useNotifAct,
   useNotifDismiss,
   useNotifReadAll,
   useNotifRead,
+  useNotifSnooze,
   useNotifResume,
   useNotifications,
 } from "@/hooks/queries";
@@ -89,14 +91,25 @@ function useDesktopAlerts(items: NotificationItem[]) {
   return { supported, enabled, toggle };
 }
 
+const ACTION_LABEL: Record<string, string> = {
+  complete: "Mark done",
+  defer: "Tomorrow",
+};
+
 function NotificationRow({
   n,
   onOpen,
   onDismiss,
+  onAct,
+  onSnooze,
+  busy,
 }: {
   n: NotificationItem;
   onOpen: (n: NotificationItem) => void;
   onDismiss: (id: string) => void;
+  onAct: (id: string, action: string) => void;
+  onSnooze: (id: string) => void;
+  busy: boolean;
 }) {
   const Icon = KIND_ICON[n.kind] ?? Bell;
   return (
@@ -128,6 +141,37 @@ function NotificationRow({
         </div>
         <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">{n.body}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">{n.reason}</p>
+
+        {/* Deal with it here. A nudge that can only be read or dismissed makes
+            you go and find the thing it is already telling you about. */}
+        {(n.actions?.length ?? 0) > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {n.actions!.map((action) => (
+              <button
+                key={action}
+                disabled={busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAct(n.id, action);
+                }}
+                className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-[11px] font-medium text-ink transition-colors hover:bg-accent-soft hover:text-accent disabled:opacity-50"
+              >
+                {ACTION_LABEL[action] ?? action}
+              </button>
+            ))}
+            <button
+              disabled={busy}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSnooze(n.id);
+              }}
+              title="Hide until tomorrow — not held against this nudge"
+              className="rounded-full px-2 py-0.5 text-[11px] text-ink-faint transition-colors hover:bg-ink/[0.06] hover:text-ink disabled:opacity-50"
+            >
+              Not now
+            </button>
+          </div>
+        )}
       </div>
       <button
         onClick={(e) => {
@@ -148,6 +192,8 @@ export function NotificationCenter() {
   const { data } = useNotifications();
   const read = useNotifRead();
   const dismiss = useNotifDismiss();
+  const act = useNotifAct();
+  const snooze = useNotifSnooze();
   const readAll = useNotifReadAll();
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -236,6 +282,9 @@ export function NotificationCenter() {
                   n={n}
                   onOpen={openItem}
                   onDismiss={(id) => dismiss.mutate(id)}
+                  onAct={(id, action) => act.mutate({ id, action })}
+                  onSnooze={(id) => snooze.mutate(id)}
+                  busy={act.isPending || snooze.isPending}
                 />
               ))
             )}

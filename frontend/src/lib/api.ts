@@ -212,6 +212,13 @@ export const api = {
   notifications: () => http<NotificationsResponse>("/notifications"),
   notifRead: (id: string) =>
     http<void>("/notifications/read", { method: "POST", body: JSON.stringify({ id }) }),
+  notifSnooze: (id: string) =>
+    http<void>("/notifications/snooze", { method: "POST", body: JSON.stringify({ id }) }),
+  notifAct: (id: string, action: string) =>
+    http<{ done: boolean; detail: string }>("/notifications/act", {
+      method: "POST",
+      body: JSON.stringify({ id, action }),
+    }),
   notifDismiss: (id: string) =>
     http<void>("/notifications/dismiss", { method: "POST", body: JSON.stringify({ id }) }),
   notifReadAll: () => http<void>("/notifications/read-all", { method: "POST" }),

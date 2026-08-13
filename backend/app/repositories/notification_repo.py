@@ -32,15 +32,24 @@ class NotificationRepository(BaseRepository[NotificationState]):
         status: str,
         kind: Optional[str] = None,
         target: Optional[str] = None,
+        action: Optional[str] = None,
     ) -> NotificationState:
         row = self.by_notification(notification_id)
         if row is None:
             row = NotificationState(
-                notification_id=notification_id, status=status, kind=kind, target=target
+                notification_id=notification_id,
+                status=status,
+                kind=kind,
+                target=target,
+                action=action,
             )
             self.add(row)
         else:
             row.status = status
+            # Only overwritten when a new action is supplied: a later "read"
+            # must not erase the fact that this nudge was once acted on.
+            if action is not None:
+                row.action = action
             # Backfill on rows written before kind/target existed.
             if kind and not row.kind:
                 row.kind = kind
