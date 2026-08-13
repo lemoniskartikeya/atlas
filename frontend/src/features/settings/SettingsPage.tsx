@@ -11,6 +11,7 @@ import type { BackupDoc, BackupResult } from "@/lib/types";
 import { CoachKeyCard } from "./CoachKeyCard";
 import { EffectsToggle } from "./EffectsToggle";
 import { ObsidianCard } from "./ObsidianCard";
+import { GoogleCard } from "./GoogleCard";
 import { DesktopCard } from "./DesktopCard";
 import { LearningCard } from "./LearningCard";
 
@@ -138,6 +139,8 @@ export function SettingsPage() {
           </div>
         </CardBody>
       </Card>
+
+      <GoogleCard />
 
       <LearningCard />
 

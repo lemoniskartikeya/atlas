@@ -5,6 +5,9 @@ import type {
   CoachMessage,
   CoachResponse,
   CoachStatus,
+  GoogleConfigStatus,
+  GoogleResult,
+  GoogleStartResponse,
   KeyTestResult,
   ObsidianSyncResult,
   ObsidianVaultCheck,
@@ -124,6 +127,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ current_password, new_password }),
     }),
+
+  googleStatus: () => http<GoogleConfigStatus>("/auth/google/status"),
+  setGoogleConfig: (client_id: string, client_secret?: string | null) =>
+    http<GoogleConfigStatus>("/auth/google/config", {
+      method: "PUT",
+      body: JSON.stringify({ client_id, client_secret: client_secret ?? null }),
+    }),
+  googleStart: () => http<GoogleStartResponse>("/auth/google/start", { method: "POST" }),
+  googleResult: (state: string) =>
+    http<GoogleResult>(`/auth/google/result?state=${encodeURIComponent(state)}`),
 
   dashboard: () => http<Dashboard>("/dashboard"),
 

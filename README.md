@@ -11,18 +11,24 @@ Atlas is built **incrementally**, runnable at every phase. **Phases 1–9 are co
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan and what remains.
 
 - ✅ **A real desktop app** — Tauri shell, FastAPI backend bundled as a sidecar,
-  MSI/NSIS installers, tray, global hotkey, native notifications
+  one self-contained installer, tray, global hotkey, native notifications
   ([`docs/DESKTOP.md`](docs/DESKTOP.md))
 - ✅ Habits, tasks, projects, journal, notes, calendar, focus mode, timeline
 - ✅ Analytics, Life Score, weekly review, natural-language search
 - ✅ **ML layer** — completion model with rolling-origin evaluation, prediction
   engine, smart scheduler, explainable recommendations, what-if simulator
-- ✅ **AI Coach** — grounded in your own data; offline by default, Claude API optional
+- ✅ **AI Coach** — grounded in your own data; offline by default. Bring a key
+  from Anthropic, Groq, Google Gemini or OpenRouter (the last three have free
+  tiers), or run a local model through Ollama so nothing leaves the machine
 - ✅ **Learning loops** — automatic retraining, notification back-off,
   recommendation-outcome tracking, model-quality history
-- ✅ **Accounts** — scrypt passwords, revocable sessions, and a real per-account
-  data partition ([`docs/SCOPING.md`](docs/SCOPING.md))
+- ✅ **Accounts** — password or Google sign-in (bring your own OAuth client),
+  scrypt hashes, revocable sessions, and a real per-account data partition
+  ([`docs/SCOPING.md`](docs/SCOPING.md))
+- ✅ **Obsidian sync** — journal and notes as plain Markdown in a vault folder,
+  two-way, most recent edit wins
 - ✅ Alembic migrations run at startup; client-side encrypted backup/restore
+- ✅ **Lite visual mode** for low-end hardware, chosen automatically
 
 Still open: PostgreSQL adapter, CSV/Markdown/PDF export, optional cloud sync,
 accessibility and i18n.
@@ -31,8 +37,8 @@ accessibility and i18n.
 
 Atlas is a **desktop app** — you don't need a terminal to use it.
 
-1. Install: run `frontend/src-tauri/target/release/bundle/nsis/Atlas_0.1.0_x64-setup.exe`
-   (per-user, no admin prompt).
+1. Install: run `release/atlas_setup.exe` (per-user, no admin prompt, works
+   offline). Build it with `npm run release` from `frontend/`.
 2. Launch from the **Desktop icon**, the **Start menu**, or `Ctrl + Shift + A`.
 
 The backend is bundled and starts with the app. Closing the window hides Atlas to

@@ -18,6 +18,7 @@ from app.core.security import (
 )
 from app.models import owned_models
 from app.models.user import AuthSession, User
+from app.services.google_auth import suggest_username
 
 log = get_logger("atlas.auth")
 
@@ -163,10 +164,78 @@ class AuthService:
         log.info("auth.models_adopted", extra={"username": user.username, "files": moved})
         return moved
 
+    # ------------------------------------------------------------- google sign-in
+    def by_google_sub(self, sub: str) -> Optional[User]:
+        return self.session.scalars(select(User).where(User.google_sub == sub)).first()
+
+    def sign_in_with_google(self, profile: dict) -> User:
+        """Find or create the account behind a verified Google profile.
+
+        Matching is on Google's `sub`, never the email — an address can change
+        hands, and treating a mutable field as an identity is how accounts get
+        taken over.
+
+        An existing password account with the same address is linked only when
+        Google says the address is verified. Without that check, anyone able to
+        create a Google account claiming your address could adopt your vault.
+        """
+        sub = str(profile.get("sub") or "").strip()
+        if not sub:
+            raise AuthError("Google did not identify the account.")
+
+        user = self.by_google_sub(sub)
+        if user:
+            return self._finish_login(user)
+
+        email = (profile.get("email") or "").strip().lower() or None
+        if email and self.by_email(email):
+            if profile.get("email_verified"):
+                existing = self.by_email(email)
+                existing.google_sub = sub
+                log.info("auth.google_linked", extra={"username": existing.username})
+                return self._finish_login(existing)
+            # Refusing to link is only half the job: the address belongs to
+            # another account, and `users.email` is unique, so carrying it onto
+            # the new account would fail the insert and break sign-in entirely.
+            # The account is still created — just without an address it cannot
+            # prove it owns.
+            log.info("auth.google_email_unverified", extra={"email": email})
+            email = None
+
+        taken = {u.username for u in self.all_users()}
+        user = User(
+            username=suggest_username(profile, taken),
+            email=email,
+            display_name=(profile.get("name") or "").strip() or None,
+            google_sub=sub,
+            # No password: this account signs in with Google. `authenticate`
+            # refuses an empty hash outright, so this is not a way in.
+            password_hash="",
+        )
+        self.session.add(user)
+        self.session.flush()
+        first_account = self.user_count() == 1
+        log.info("auth.google_registered", extra={"username": user.username})
+        if first_account:
+            # Same courtesy the password path gets: a pre-accounts vault is
+            # adopted by whoever signs in first, rather than left invisible.
+            self.claim_orphan_vault(user)
+        return self._finish_login(user)
+
+    def _finish_login(self, user: User) -> User:
+        user.last_login_at = datetime.now(timezone.utc)
+        self.session.commit()
+        return user
+
     # ------------------------------------------------------------------- login
     def authenticate(self, identifier: str, password: str) -> User:
         ident = identifier.strip().lower()
         user = self.by_username(ident) or (self.by_email(ident) if "@" in ident else None)
+        # A Google-only account has no password hash. Refuse before verifying,
+        # so an empty candidate can never be compared against an empty stored
+        # value and pass.
+        if user is not None and not user.password_hash:
+            raise AuthError("That account signs in with Google.")
         # Same message either way: distinguishing them tells an attacker which
         # usernames exist.
         if user is None or not verify_password(password, user.password_hash):

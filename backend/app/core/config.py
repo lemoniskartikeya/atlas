@@ -82,12 +82,22 @@ class Settings(BaseSettings):
 
     data_dir: str = (BASE_DIR / "data").as_posix()
 
+    #: Port the backend listens on. Needed to build Google's loopback redirect
+    #: URI, which has to match what is registered in the Cloud console exactly.
+    port: int = 8000
+
+    # Sign in with Google. The client ID belongs to whoever runs Atlas: it is
+    # created in their own Google Cloud project and cannot be shipped inside a
+    # binary anyone can read, so it is configuration rather than a constant.
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+
     # AI coach (opt-in). With no key the coach runs fully offline, answering from
     # the user's own numbers. Configuring a provider sends a compact digest of
     # that data to whoever it names — except "ollama", which is a model running
     # on this machine and never leaves it.
     #
-    # Keys live one per provider (ATLAS_GROQ_API_KEY, ATLAS_GEMINI_API_KEY, …)
+    # Keys live one per provider (ATLAS_GROQ_API_KEY, ATLAS_GEMINI_API_KEY, ...)
     # so switching provider doesn't discard the key for the previous one.
     coach_provider: str = "anthropic"
     #: Blank means "whatever that provider's default model is".

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, Check, Eye, EyeOff, X } from "lucide-react";
 import { AtlasMark } from "@/components/ui/atlas-mark";
+import { GoogleSignIn } from "./GoogleSignIn";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,7 @@ function StrengthBar({ password }: { password: string }) {
  * it opens in "create" mode, because there is nothing to sign in to.
  */
 export function LoginScreen() {
-  const { signIn, signUp, needsSetup, policy } = useAuth();
+  const { signIn, signUp, signInWithToken, needsSetup, policy } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">(needsSetup ? "signup" : "signin");
 
   const [identifier, setIdentifier] = useState("");
@@ -205,6 +206,10 @@ export function LoginScreen() {
                 : "Sign in"}
           </Button>
         </form>
+
+        <div className="mt-4">
+          <GoogleSignIn onToken={(token) => void signInWithToken(token).catch((e) => setError(String(e.message ?? e)))} />
+        </div>
 
         {!needsSetup && (
           <p className="mt-4 text-center text-[12px] text-ink-muted">

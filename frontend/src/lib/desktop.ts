@@ -49,6 +49,22 @@ export async function reportDesktopInfo(context: string, message: string): Promi
   }
 }
 
+/**
+ * Open a URL in the user's real browser rather than this webview.
+ *
+ * Google refuses to serve its sign-in page inside an embedded webview — the
+ * user can't see the address bar there, so they can't tell who is asking for
+ * their password. In a browser build a new tab is already the real browser.
+ */
+export async function openExternal(url: string): Promise<void> {
+  if (!isDesktop()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_external", { url });
+}
+
 export const windowControls = {
   minimize: async () => {
     if (isDesktop()) await (await appWindow()).minimize();

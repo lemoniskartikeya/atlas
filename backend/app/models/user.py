@@ -24,7 +24,15 @@ class User(UUIDMixin, TimestampMixin, Base):
         String(255), unique=True, index=True, default=None
     )
     display_name: Mapped[Optional[str]] = mapped_column(String(120), default=None)
+    # Blank for accounts that only ever sign in with Google: there is no
+    # password to check, and `authenticate` refuses an empty hash outright
+    # rather than letting an empty string compare equal to anything.
     password_hash: Mapped[str] = mapped_column(String(255))
+    #: Google's stable account id ("sub"). Not the email — people change those,
+    #: and matching on a mutable field is how accounts get taken over.
+    google_sub: Mapped[Optional[str]] = mapped_column(
+        String(64), unique=True, index=True, default=None
+    )
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
     )

@@ -20,6 +20,8 @@ interface AuthState {
   needsSetup: boolean;
   signIn: (identifier: string, password: string) => Promise<void>;
   signUp: (body: RegisterBody) => Promise<void>;
+  /** Adopt a session the backend already minted (Google sign-in). */
+  signInWithToken: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -93,6 +95,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
 
+  const signInWithToken = useCallback(
+    async (token: string) => {
+      // The token is already valid; ask the backend who it belongs to rather
+      // than trusting anything the browser round-trip might have carried.
+      session.set(token);
+      const status = await api.authStatus();
+      if (!status.authenticated || !status.user) {
+        session.clear();
+        throw new Error("That sign-in didn't complete. Try again.");
+      }
+      adopt(token, status.user);
+    },
+    [adopt],
+  );
+
   const signOut = useCallback(async () => {
     try {
       await api.logout();
@@ -109,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [qc]);
 
   const value = useMemo(
-    () => ({ user, policy, ready, needsSetup, signIn, signUp, signOut }),
-    [user, policy, ready, needsSetup, signIn, signUp, signOut],
+    () => ({ user, policy, ready, needsSetup, signIn, signUp, signInWithToken, signOut }),
+    [user, policy, ready, needsSetup, signIn, signUp, signInWithToken, signOut],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

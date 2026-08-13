@@ -84,6 +84,23 @@ fn log_ui_error(context: String, message: String) {
     log::error!("ui: {context}: {message}");
 }
 
+/// Open a URL in the user's real browser.
+///
+/// Google refuses to serve its sign-in page inside an embedded webview, and is
+/// right to: the user cannot see the address bar there, so they cannot check
+/// who is asking for their password. Only http(s) is allowed through — this
+/// takes a URL from the webview, and handing an arbitrary scheme to the OS
+/// opener is how that becomes "launch anything on the machine".
+#[tauri::command]
+fn open_external(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("Refusing to open a non-web URL".into());
+    }
+    app.shell()
+        .open(&url, None)
+        .map_err(|err| format!("could not open the browser: {err}"))
+}
+
 /// Notes from the webview about the environment it actually ended up in.
 ///
 /// "The window looks wrong on my machine" is unanswerable without knowing the
@@ -256,7 +273,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![log_ui_error, log_ui_info])
+        .invoke_handler(tauri::generate_handler![log_ui_error, log_ui_info, open_external])
         .on_window_event(|window, event| {
             // Closing the window parks Atlas in the tray instead of quitting —
             // background nudges and the global hotkey keep working. Quit is an

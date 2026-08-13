@@ -773,3 +773,22 @@ export interface ObsidianSyncResult {
   conflicts: string[];
   vault_path: string;
 }
+
+export interface GoogleConfigStatus {
+  configured: boolean;
+  /** Must be registered verbatim in the Google Cloud console. */
+  redirect_uri: string;
+  client_id_hint?: string | null;
+}
+
+export interface GoogleStartResponse {
+  authorize_url: string;
+  state: string;
+}
+
+export interface GoogleResult {
+  status: "pending" | "ready" | "error";
+  detail?: string | null;
+  token?: string | null;
+  username?: string | null;
+}
