@@ -73,6 +73,27 @@ fn stop_backend(app: &tauri::AppHandle) {
     }
 }
 
+/// Sink for failures raised in the webview.
+///
+/// Without this a rejected IPC call — a missing capability, say — dies in a
+/// console nobody can open in a release build, and the feature just looks
+/// broken. That is exactly how the window controls stayed dead: `close()` was
+/// never granted `core:window:allow-close`, and the rejection was swallowed.
+#[tauri::command]
+fn log_ui_error(context: String, message: String) {
+    log::error!("ui: {context}: {message}");
+}
+
+/// Notes from the webview about the environment it actually ended up in.
+///
+/// "The window looks wrong on my machine" is unanswerable without knowing the
+/// viewport and device pixel ratio it rendered at, and neither is visible from
+/// the Rust side.
+#[tauri::command]
+fn log_ui_info(context: String, message: String) {
+    log::info!("ui: {context}: {message}");
+}
+
 /// Bring the main window to the foreground, restoring it if minimised.
 fn show_main(app: &tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
@@ -136,8 +157,23 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default()
-        .manage(Backend::default())
+    let mut builder = tauri::Builder::default().manage(Backend::default());
+
+    // Must be registered before anything else, so a second launch is turned away
+    // before it starts a tray icon or a sidecar. Atlas closes to the tray, so
+    // re-opening it from the desktop icon while it is already running is the
+    // normal case — without this the second instance takes over the window the
+    // user sees, then loses its sidecar to the already-bound port 8000 and
+    // cannot register the global hotkey either.
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            log::info!("second launch — focusing the running instance");
+            show_main(app);
+        }));
+    }
+
+    builder = builder
         // Remembers size/position/maximised state between launches.
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
@@ -177,6 +213,14 @@ pub fn run() {
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .level(log::LevelFilter::Info)
+                    // Stamp lines in the user's own clock, not UTC (the default).
+                    // One person reads this log, on this machine, comparing it
+                    // against when they remember something going wrong — an
+                    // offset they have to add in their head is a bug in a
+                    // diagnostic tool. Falls back to UTC if the zone is unknown.
+                    // (The mirrored backend JSON keeps its own `ts` in UTC; it
+                    // carries an explicit +00:00 offset, so it stays unambiguous.)
+                    .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                     .targets([
                         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
@@ -212,6 +256,7 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![log_ui_error, log_ui_info])
         .on_window_event(|window, event| {
             // Closing the window parks Atlas in the tray instead of quitting —
             // background nudges and the global hotkey keep working. Quit is an

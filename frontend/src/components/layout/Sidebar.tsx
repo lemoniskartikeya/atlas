@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Orbit } from "lucide-react";
+import { AtlasMark } from "@/components/ui/atlas-mark";
 import { cn } from "@/lib/utils";
 import { NAV, SETTINGS_NAV, type NavItemDef } from "./nav";
 
@@ -29,7 +29,7 @@ export function Sidebar() {
       <div className="glass m-2 flex h-[calc(100vh-var(--chrome-h)-1rem)] flex-col rounded-3xl p-3">
         <div className="mb-4 flex items-center gap-2.5 px-2 py-1">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent text-white shadow-sm">
-            <Orbit size={18} />
+            <AtlasMark size={17} />
           </div>
           <span className="hidden text-[15px] font-display font-semibold text-ink lg:block">
             Atlas

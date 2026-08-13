@@ -22,6 +22,30 @@ icon, no terminal, no `localhost` in sight.
 Everything degrades gracefully in a browser: `lib/desktop.ts` feature-detects
 the Tauri runtime and each capability becomes a no-op or its web equivalent.
 
+## Install and launch
+
+The normal way to run Atlas is to install it — you should never need a terminal.
+
+1. Run `frontend/src-tauri/target/release/bundle/nsis/Atlas_0.1.0_x64-setup.exe`.
+   It installs **for the current user only**, so Windows does not ask for admin
+   rights (`bundle.windows.nsis.installMode: "currentUser"`).
+2. Atlas lands in `%LOCALAPPDATA%\Atlas`, with a **Start Menu** entry and a
+   **Desktop shortcut**.
+
+After that, launch it any of these ways:
+
+- the **Desktop** icon
+- **Start menu** → type "Atlas"
+- **`Ctrl + Shift + A`** from anywhere, once Atlas is running (it lives in the
+  tray, so this summons it back after you close the window)
+
+Closing the window hides it to the tray; quit for real from the tray menu.
+Nothing else needs to be started — the backend is bundled and boots with the app
+(`BackendGate` holds the UI on a splash until `/health` answers).
+
+The MSI (`bundle/msi/Atlas_0.1.0_x64_en-US.msi`) is the same app for
+machine-wide or managed deployment; the NSIS setup is the one to use day to day.
+
 ## Prerequisites (one-time)
 
 1. **Rust** — install [rustup](https://rustup.rs):
@@ -122,6 +146,26 @@ It captures the shell's own events (tray, hotkey, autostart state, sidecar
 lifecycle) and mirrors the backend's stdout. A desktop app that fails quietly
 on someone else's machine is otherwise undiagnosable.
 
+Line timestamps are **local time** (`TimezoneStrategy::UseLocal`; the plugin
+defaults to UTC). The backend's mirrored JSON keeps its own `ts` in UTC, which
+is explicit in the value's `+00:00` offset. Note that `timezone_strategy()`
+also *replaces the line format* — that is documented plugin behaviour, not a
+mistake — so lines written from this point on read `[date][LEVEL][target]`
+where older ones read `[date][target][LEVEL]`.
+
+**The trap that made this log useless for its first five weeks:** Alembic's
+`env.py` calls `logging.config.fileConfig`, and Python disables *every logger
+the .ini does not name* unless you pass `disable_existing_loggers=False`. Since
+`ensure_schema` runs migrations in-process at startup, that call silenced every
+`uvicorn.*` and `atlas.*` logger about three seconds into each launch — so the
+log recorded the boot and then nothing at all: no "startup complete", no
+`schema.ready`, no job runs, no errors, not even shutdown. The tell is a log
+whose last line is always Alembic's `Will assume non-transactional DDL`.
+`core/schema.py` now sets `cfg.attributes["configure_logger"] = False` (Alembic's
+escape hatch for programmatic use) so the app keeps the logging it configured,
+and `env.py` passes `disable_existing_loggers=False` so the CLI path cannot do
+it either. Pinned by `tests/test_schema.py`.
+
 ## Launch at login
 
 Handled by `tauri-plugin-autostart`, which writes `HKCU\...\CurrentVersion\Run`
@@ -138,8 +182,25 @@ on Windows. Two sharp edges worth knowing, both handled in `lib/desktop.ts` and
   The toggle now reads the state back after writing and, on a mismatch, points
   at Task Manager → Startup apps instead of failing quietly.
 
+## The icon
+
+`frontend/src-tauri/app-icon.svg` is the single source of truth: a terracotta
+tile (`#C2703D`) carrying the paper-white Atlas "A" — the warm-editorial accent
+and display letterform, so the taskbar icon and the app agree. Regenerate every
+platform size with:
+
+    cd frontend && npx tauri icon src-tauri/app-icon.svg
+
+That rewrites `src-tauri/icons/` (PNG set, `icon.ico`, `icon.icns`). It also
+emits `android/` and `ios/` folders — delete them; Atlas is desktop-only.
+
+The same geometry is drawn in-app by `components/ui/atlas-mark.tsx` (sidebar,
+login, splash, titlebar) and served to browsers as `frontend/public/favicon.svg`.
+If the glyph changes, change it in all three.
+
 ## Files
 
+- `frontend/src-tauri/app-icon.svg` — icon source; regenerate with `tauri icon`.
 - `frontend/src-tauri/tauri.conf.json` — window, identifier (`app.atlas.desktop`),
   `externalBin`, bundle config.
 - `frontend/src-tauri/src/lib.rs` — tray, hotkey, window events, sidecar lifecycle.

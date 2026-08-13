@@ -34,3 +34,4 @@ tauri-plugin-shell = "2"
 # unresolvable in capabilities/default.json.
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
