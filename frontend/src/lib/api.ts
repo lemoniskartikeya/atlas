@@ -30,6 +30,7 @@ import type {
   MLStatus,
   NotificationsResponse,
   DeferResponse,
+  ParsedTask,
   PlanInteractionIn,
   PlanResponse,
   PredictionReport,
@@ -197,6 +198,8 @@ export const api = {
   trainModel: () => http<TrainOutcome>("/ml/train", { method: "POST" }),
 
   plan: () => http<PlanResponse>("/planner/today"),
+  parseTaskPhrase: (text: string) =>
+    http<ParsedTask>("/tasks/parse", { method: "POST", body: JSON.stringify({ text }) }),
   deferTask: (body: { task_id: string; days?: number; suggested_block?: string }) =>
     http<DeferResponse>("/planner/defer", { method: "POST", body: JSON.stringify(body) }),
   recordPlanInteraction: (body: PlanInteractionIn) =>

@@ -492,6 +492,18 @@ export interface PlanItem {
   confidence: number;
 }
 
+export interface ParsedTask {
+  title: string;
+  due_date: string | null;
+  deadline: string | null;
+  priority: Priority | null;
+  estimated_effort_min: number | null;
+  tags: string[];
+  /** What the parser took out of the phrase, in plain words. Empty means it
+   *  found nothing and the text is just a title. */
+  understood: string[];
+}
+
 export interface DeferResponse {
   task_id: string;
   title: string;

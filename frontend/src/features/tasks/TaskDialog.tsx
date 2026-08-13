@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Wand2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useCreateTask, useDeleteTask, useUpdateTask } from "@/hooks/queries";
-import type { Priority, Task, TaskStatus } from "@/lib/types";
+import { api } from "@/lib/api";
+import type { ParsedTask, Priority, Task, TaskStatus } from "@/lib/types";
 
 export function TaskDialog({
   open,
@@ -39,17 +40,33 @@ export function TaskDialog({
     setTags((task?.tags ?? []).join(", "));
   }, [open, task]);
 
+  // What the title reads as, when it reads as more than a title. Only for new
+  // tasks: re-parsing an existing one would rewrite fields the user has
+  // already set deliberately.
+  const parsed = useParsedTitle(editing ? "" : title);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    // The parser fills blanks and never overrules the form. Anything visible
+    // on screen was either chosen or left alone on purpose, and a phrase typed
+    // into the title should not silently undo it.
+    const parsedTags = parsed?.tags ?? [];
+    const chosenTags = tags.trim()
+      ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+      : parsedTags;
+
     const body: Partial<Task> & { title: string } = {
-      title: title.trim(),
+      title: (parsed?.title || title).trim(),
       description: desc.trim() || null,
       status,
-      priority,
-      due_date: due || null,
-      estimated_effort_min: effort ? Number(effort) : null,
-      tags: tags.trim() ? tags.split(",").map((t) => t.trim()).filter(Boolean) : null,
+      priority: priority === "medium" && parsed?.priority ? parsed.priority : priority,
+      due_date: due || parsed?.due_date || null,
+      estimated_effort_min: effort
+        ? Number(effort)
+        : (parsed?.estimated_effort_min ?? null),
+      tags: chosenTags.length ? chosenTags : null,
     };
     if (editing && task) await update.mutateAsync({ id: task.id, body });
     else await create.mutateAsync(body);
@@ -73,8 +90,17 @@ export function TaskDialog({
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="What needs doing?"
+            placeholder="What needs doing?  (try: gym tomorrow 7am !high)"
           />
+          {parsed && parsed.understood.length > 0 && (
+            // Never apply something the user can't see coming.
+            <p className="mt-1 flex items-start gap-1 text-[11px] leading-relaxed text-ink-faint">
+              <Wand2 size={11} className="mt-0.5 shrink-0 text-accent" />
+              <span>
+                Reading this as “{parsed.title}” — {parsed.understood.join(" · ")}
+              </span>
+            </p>
+          )}
         </Field>
         <Field label="Notes (optional)">
           <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} />
@@ -138,4 +164,39 @@ export function TaskDialog({
       </form>
     </Dialog>
   );
+}
+
+/**
+ * The typed title, read as a task — or null when it is only a title.
+ *
+ * Debounced so a phrase is parsed once someone stops typing rather than on
+ * every keystroke, and stale replies are dropped: with requests in flight the
+ * last one to arrive is not always the last one sent.
+ */
+function useParsedTitle(text: string): ParsedTask | null {
+  const [parsed, setParsed] = useState<ParsedTask | null>(null);
+
+  useEffect(() => {
+    const phrase = text.trim();
+    if (phrase.length < 3) {
+      setParsed(null);
+      return;
+    }
+    let live = true;
+    const id = window.setTimeout(() => {
+      api
+        .parseTaskPhrase(phrase)
+        .then((r) => {
+          if (live) setParsed(r.understood.length ? r : null);
+        })
+        // A parse failure just means no hint; typing still works.
+        .catch(() => live && setParsed(null));
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(id);
+    };
+  }, [text]);
+
+  return parsed;
 }

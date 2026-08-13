@@ -5,7 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.deps import task_service
 from app.models.task import Task
-from app.schemas.task import CompletedTasks, TaskCreate, TaskRead, TaskUpdate
+from app.schemas.task import (
+    CompletedTasks,
+    ParsedTaskOut,
+    ParseRequest,
+    TaskCreate,
+    TaskRead,
+    TaskUpdate,
+)
+from app.services import nl_task
 from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -29,6 +37,25 @@ def list_tasks(
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def create_task(payload: TaskCreate, svc: TaskService = Depends(task_service)):
     return svc.create(payload)
+
+
+@router.post("/parse", response_model=ParsedTaskOut)
+def parse_task_phrase(body: ParseRequest):
+    """Read a typed phrase into task fields, without creating anything.
+
+    A preview: the caller shows what was understood and lets the user correct
+    it before saving. Deterministic and offline — no model, no key, no cost.
+    """
+    parsed = nl_task.parse(body.text)
+    return ParsedTaskOut(
+        title=parsed.title,
+        due_date=parsed.due_date,
+        deadline=parsed.deadline,
+        priority=parsed.priority,
+        estimated_effort_min=parsed.estimated_effort_min,
+        tags=parsed.tags,
+        understood=parsed.understood,
+    )
 
 
 @router.get("/completed", response_model=CompletedTasks)

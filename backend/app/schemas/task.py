@@ -85,3 +85,25 @@ class CompletedTasks(BaseModel):
 
     stats: CompletionStats
     tasks: list[TaskRead]
+
+
+class ParseRequest(BaseModel):
+    """A phrase typed into the title field."""
+
+    text: str
+
+
+class ParsedTaskOut(BaseModel):
+    """What was read out of it. A preview — nothing is created.
+
+    `understood` is the point of the response as much as the fields are: the
+    user has to be able to see what the app decided before it decides it.
+    """
+
+    title: str
+    due_date: Optional[date] = None
+    deadline: Optional[datetime] = None
+    priority: Optional[str] = None
+    estimated_effort_min: Optional[int] = None
+    tags: list[str] = []
+    understood: list[str] = []
