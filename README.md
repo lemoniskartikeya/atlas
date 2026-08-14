@@ -7,30 +7,40 @@ history into evidence-backed recommendations. Everything runs locally by default
 
 ## Status
 
-Atlas is built **incrementally**, runnable at every phase. **Phases 1–9 are complete.**
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan and what remains.
+Atlas is built **incrementally**, runnable at every phase. **Phases 1–11 are complete**, and
+542 backend tests pass. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan and what remains.
 
 - ✅ **A real desktop app** — Tauri shell, FastAPI backend bundled as a sidecar,
   one self-contained installer, tray, global hotkey, native notifications
   ([`docs/DESKTOP.md`](docs/DESKTOP.md))
 - ✅ Habits, tasks, projects, journal, notes, calendar, focus mode, timeline
 - ✅ Analytics, Life Score, weekly review, natural-language search
-- ✅ **ML layer** — completion model with rolling-origin evaluation, prediction
-  engine, smart scheduler, explainable recommendations, what-if simulator
+- ✅ **Analytics that say what they mean** — insight sentences with the arithmetic
+  shown underneath, and a behaviour profile (when you work, which days hold, how
+  long your runs last) that stays silent rather than guessing from thin evidence
+- ✅ **ML layer** — completion model with rolling-origin evaluation, a second model
+  for whether a task lands by its due date, prediction engine, smart scheduler,
+  explainable recommendations, what-if simulator
+- ✅ **Quick capture** — `gym tomorrow 7am !high` parses into a task, offline and
+  deterministic; defer to tomorrow without moving the deadline; act on a
+  notification instead of only reading it
 - ✅ **AI Coach** — grounded in your own data; offline by default. Bring a key
   from Anthropic, Groq, Google Gemini or OpenRouter (the last three have free
   tiers), or run a local model through Ollama so nothing leaves the machine
 - ✅ **Learning loops** — automatic retraining, notification back-off,
   recommendation-outcome tracking, model-quality history
-- ✅ **Accounts** — password or Google sign-in (bring your own OAuth client),
-  scrypt hashes, revocable sessions, and a real per-account data partition
-  ([`docs/SCOPING.md`](docs/SCOPING.md))
+- ✅ **Accounts** — sign in with a password, with Google (bring your own OAuth
+  client), or with a code emailed to you (Resend, or free SMTP through an
+  ordinary mailbox). scrypt hashes, revocable sessions, and a real per-account
+  data partition ([`docs/SCOPING.md`](docs/SCOPING.md))
 - ✅ **Obsidian sync** — journal and notes as plain Markdown in a vault folder,
   two-way, most recent edit wins
-- ✅ Alembic migrations run at startup; client-side encrypted backup/restore
+- ✅ Alembic migrations run at startup; client-side encrypted backup/restore, and
+  **CSV export** — seven flat sheets to open in a spreadsheet, including a
+  row-per-day join of what was due, what got done, and how you slept
 - ✅ **Lite visual mode** for low-end hardware, chosen automatically
 
-Still open: PostgreSQL adapter, CSV/Markdown/PDF export, optional cloud sync,
+Still open: PostgreSQL adapter, Markdown/PDF export, optional cloud sync,
 accessibility and i18n.
 
 ## Run Atlas
@@ -57,6 +67,8 @@ atlas/
 │       ├── schemas/       Pydantic DTOs (API contracts)
 │       ├── repositories/  repository pattern over the ORM
 │       ├── services/      business logic (streaks, analytics, dashboard)
+│       ├── learning/      feature engineering, models, registry (optional import)
+│       ├── migrations/    Alembic revisions, applied in-process at startup
 │       ├── api/v1/        HTTP routers
 │       └── db/            seed data
 ├── frontend/          React + TypeScript + Vite + Tailwind (warm editorial)
@@ -65,8 +77,8 @@ atlas/
 ```
 
 Data flows one way: **API routers** depend on **services**, services depend on **repositories**,
-repositories own the **ORM models**. Routers never touch the ORM directly. This keeps the ML
-layer (a future service) able to read history without leaking persistence details everywhere.
+repositories own the **ORM models**. Routers never touch the ORM directly. This is what lets the
+ML layer read the full history without leaking persistence details everywhere.
 
 ## Develop
 
@@ -101,5 +113,6 @@ The frontend expects the backend at `http://127.0.0.1:8000` (override with `VITE
 
 - **Local-first & private.** SQLite on your machine; no telemetry, no tracking.
 - **Never forget.** History is append-only where it matters (habit logs, journal, analytics).
-- **Explainable.** Every future recommendation ships with a reason and a confidence score.
-- **Runnable at every step.** Each phase leaves `main` in a working state.
+- **Explainable.** Every recommendation ships with a reason and a confidence score.
+- **Honest about thin evidence.** An insight with too little behind it is left out, not softened.
+- **Runnable at every step.** Each phase leaves `master` in a working state.
