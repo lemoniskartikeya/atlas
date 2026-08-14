@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { isDesktop, pickFolder } from "@/lib/desktop";
+import { VAULT_KEY } from "@/lib/obsidian";
 import { cn } from "@/lib/utils";
 import type { ObsidianSyncResult, ObsidianVaultCheck } from "@/lib/types";
-
-const KEY = "atlas-obsidian-vault";
 
 /**
  * Obsidian sync.
@@ -20,7 +19,7 @@ const KEY = "atlas-obsidian-vault";
  */
 export function ObsidianCard() {
   const qc = useQueryClient();
-  const [path, setPath] = useState(() => localStorage.getItem(KEY) ?? "");
+  const [path, setPath] = useState(() => localStorage.getItem(VAULT_KEY) ?? "");
   const [check, setCheck] = useState<ObsidianVaultCheck | null>(null);
   const [result, setResult] = useState<ObsidianSyncResult | null>(null);
   const [busy, setBusy] = useState<null | "check" | "sync">(null);
@@ -46,7 +45,7 @@ export function ObsidianCard() {
     setPath(value);
     setCheck(null);
     setResult(null);
-    localStorage.setItem(KEY, value);
+    localStorage.setItem(VAULT_KEY, value);
   };
 
   const run = async (kind: "check" | "sync", fn: () => Promise<void>) => {
@@ -164,8 +163,9 @@ export function ObsidianCard() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <p className="text-[11px] leading-relaxed text-ink-faint">
-          If both sides changed, the newer edit wins and the other is reported above. Runs only
-          when you ask.
+          If both sides changed, the newer edit wins and the other is reported above. Journal
+          edits go out on their own a few seconds after you stop typing; this button syncs
+          everything now and is the only place sync problems are reported.
         </p>
       </CardBody>
     </Card>

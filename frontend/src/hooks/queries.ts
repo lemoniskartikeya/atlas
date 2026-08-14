@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { syncVaultSoon } from "@/lib/obsidian";
 import type {
   CoachMessage,
   FocusSessionCreate,
@@ -165,6 +166,10 @@ export function useUpsertJournal() {
     onSuccess: () => {
       refresh();
       qc.invalidateQueries({ queryKey: keys.journal });
+      // Carry the save out to the vault. Only the client knows where that is,
+      // so the backend cannot do this itself. Coalesced and best-effort — a
+      // missing vault must not make a saved entry look unsaved.
+      syncVaultSoon(() => qc.invalidateQueries({ queryKey: keys.journal }));
     },
   });
 }
