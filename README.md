@@ -10,35 +10,35 @@ history into evidence-backed recommendations. Everything runs locally by default
 Atlas is built **incrementally**, runnable at every phase. **Phases 1–11 are complete**, and
 542 backend tests pass. See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan and what remains.
 
-- ✅ **A real desktop app** — Tauri shell, FastAPI backend bundled as a sidecar,
+- **A real desktop app** — Tauri shell, FastAPI backend bundled as a sidecar,
   one self-contained installer, tray, global hotkey, native notifications
   ([`docs/DESKTOP.md`](docs/DESKTOP.md))
-- ✅ Habits, tasks, projects, journal, notes, calendar, focus mode, timeline
-- ✅ Analytics, Life Score, weekly review, natural-language search
-- ✅ **Analytics that say what they mean** — insight sentences with the arithmetic
+- Habits, tasks, projects, journal, notes, calendar, focus mode, timeline
+- Analytics, Life Score, weekly review, natural-language search
+- **Analytics that say what they mean** — insight sentences with the arithmetic
   shown underneath, and a behaviour profile (when you work, which days hold, how
   long your runs last) that stays silent rather than guessing from thin evidence
-- ✅ **ML layer** — completion model with rolling-origin evaluation, a second model
+- **ML layer** — completion model with rolling-origin evaluation, a second model
   for whether a task lands by its due date, prediction engine, smart scheduler,
   explainable recommendations, what-if simulator
-- ✅ **Quick capture** — `gym tomorrow 7am !high` parses into a task, offline and
+- **Quick capture** — `gym tomorrow 7am !high` parses into a task, offline and
   deterministic; defer to tomorrow without moving the deadline; act on a
   notification instead of only reading it
-- ✅ **AI Coach** — grounded in your own data; offline by default. Bring a key
+- **AI Coach** — grounded in your own data; offline by default. Bring a key
   from Anthropic, Groq, Google Gemini or OpenRouter (the last three have free
   tiers), or run a local model through Ollama so nothing leaves the machine
-- ✅ **Learning loops** — automatic retraining, notification back-off,
+- **Learning loops** — automatic retraining, notification back-off,
   recommendation-outcome tracking, model-quality history
-- ✅ **Accounts** — sign in with a password, with Google (bring your own OAuth
+- **Accounts** — sign in with a password, with Google (bring your own OAuth
   client), or with a code emailed to you (Resend, or free SMTP through an
   ordinary mailbox). scrypt hashes, revocable sessions, and a real per-account
   data partition ([`docs/SCOPING.md`](docs/SCOPING.md))
-- ✅ **Obsidian sync** — journal and notes as plain Markdown in a vault folder,
+- **Obsidian sync** — journal and notes as plain Markdown in a vault folder,
   two-way, most recent edit wins
-- ✅ Alembic migrations run at startup; client-side encrypted backup/restore, and
+- Alembic migrations run at startup; client-side encrypted backup/restore, and
   **CSV export** — seven flat sheets to open in a spreadsheet, including a
   row-per-day join of what was due, what got done, and how you slept
-- ✅ **Lite visual mode** for low-end hardware, chosen automatically
+- **Lite visual mode** for low-end hardware, chosen automatically
 
 Still open: PostgreSQL adapter, Markdown/PDF export, optional cloud sync,
 accessibility and i18n.
