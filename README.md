@@ -59,21 +59,21 @@ rebuild the installers — are in [`docs/DESKTOP.md`](docs/DESKTOP.md).
 
 ```
 atlas/
-├── backend/           FastAPI + SQLAlchemy + SQLite  (Python 3.12)
-│   └── app/
-│       ├── core/          config, logging, database engine/session
-│       ├── domain/        enums + pure domain logic (no framework deps)
-│       ├── models/        SQLAlchemy ORM models (persistence)
-│       ├── schemas/       Pydantic DTOs (API contracts)
-│       ├── repositories/  repository pattern over the ORM
-│       ├── services/      business logic (streaks, analytics, dashboard)
-│       ├── learning/      feature engineering, models, registry (optional import)
-│       ├── migrations/    Alembic revisions, applied in-process at startup
-│       ├── api/v1/        HTTP routers
-│       └── db/            seed data
-├── frontend/          React + TypeScript + Vite + Tailwind (warm editorial)
-│   └── src-tauri/     Tauri desktop shell (tray, hotkey, sidecar lifecycle)
-└── docs/              roadmap and design notes
++-- backend/           FastAPI + SQLAlchemy + SQLite  (Python 3.12)
+|   \-- app/
+|       +-- core/          config, logging, database engine/session
+|       +-- domain/        enums + pure domain logic (no framework deps)
+|       +-- models/        SQLAlchemy ORM models (persistence)
+|       +-- schemas/       Pydantic DTOs (API contracts)
+|       +-- repositories/  repository pattern over the ORM
+|       +-- services/      business logic (streaks, analytics, dashboard)
+|       +-- learning/      feature engineering, models, registry (optional import)
+|       +-- migrations/    Alembic revisions, applied in-process at startup
+|       +-- api/v1/        HTTP routers
+|       \-- db/            seed data
++-- frontend/          React + TypeScript + Vite + Tailwind (warm editorial)
+|   \-- src-tauri/     Tauri desktop shell (tray, hotkey, sidecar lifecycle)
+\-- docs/              roadmap and design notes
 ```
 
 Data flows one way: **API routers** depend on **services**, services depend on **repositories**,
