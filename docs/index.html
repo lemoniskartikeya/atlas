@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Atlas — a second brain that shows its work</title>
+<meta name="description" content="A local-first desktop app for habits, tasks, journal, notes and focus sessions. Atlas reads months of your own history and prints the arithmetic under every claim it makes. Windows, free, no account.">
+<link rel="canonical" href="https://lemoniskartikeya.github.io/atlas/">
+
+<meta name="theme-color" content="#fbf8f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lemoniskartikeya.github.io/atlas/">
+<meta property="og:title" content="Atlas — a second brain that shows its work">
+<meta property="og:description" content="Habits, tasks, journal, notes and focus sessions, kept in one file on your own machine. Every insight carries the counts it came from.">
+<meta property="og:site_name" content="Atlas">
+<meta name="twitter:card" content="summary">
+
+<!-- Wordmark 'A' on the terracotta accent; inline so the page stays one file. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23c2703d'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='40' font-weight='600' fill='%23fbf8f4' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+
+<style>
+  /* ── Tokens ───────────────────────────────────────────────────────────
+     Inherited from the app's own design system (frontend/src/index.css)
+     so the site and the product read as one thing. Light is the base;
+     dark redefines tokens only.                                        */
+  :root {
+    --canvas: #fbf8f4;
+    --surface: #ffffff;
+    --ink: #2b2622;
+    --ink-muted: #6b6259;
+    --ink-faint: #9c9289;
+    --accent: #c2703d;
+    --accent-soft: rgba(194, 112, 61, 0.12);
+    --sage: #6e8f63;
+    --sage-soft: rgba(110, 143, 99, 0.13);
+    --line: rgba(43, 38, 34, 0.13);
+    --line-strong: rgba(43, 38, 34, 0.26);
+    --shadow: 0 1px 2px rgba(43, 38, 34, 0.05), 0 12px 32px -18px rgba(43, 38, 34, 0.3);
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Menlo, Consolas, monospace;
+
+    --measure: 60ch;
+    --pad-x: clamp(1.5rem, 4.5vw, 4rem);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #14110e;
+      --surface: #221d18;
+      --ink: #ede6de;
+      --ink-muted: #a99e92;
+      --ink-faint: #776d63;
+      --accent: #e08b54;
+      --accent-soft: rgba(224, 139, 84, 0.16);
+      --sage: #8fb183;
+      --sage-soft: rgba(143, 177, 131, 0.15);
+      --line: rgba(237, 230, 222, 0.14);
+      --line-strong: rgba(237, 230, 222, 0.28);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --canvas: #14110e;
+    --surface: #221d18;
+    --ink: #ede6de;
+    --ink-muted: #a99e92;
+    --ink-faint: #776d63;
+    --accent: #e08b54;
+    --accent-soft: rgba(224, 139, 84, 0.16);
+    --sage: #8fb183;
+    --sage-soft: rgba(143, 177, 131, 0.15);
+    --line: rgba(237, 230, 222, 0.14);
+    --line-strong: rgba(237, 230, 222, 0.28);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+    color-scheme: dark;
+  }
+
+  /* ── Base ─────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    overflow: hidden; /* the deck is the scroller, not the document */
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: -0.012em;
+  }
+
+  p { margin: 0; }
+
+  /* ── The deck: panels laid end to end, travelling rightward ───────── */
+  .deck {
+    display: flex;
+    align-items: stretch;
+    height: 100vh;
+    height: 100dvh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .deck::-webkit-scrollbar { display: none; }
+  .deck:focus { outline: none; }
+
+  .panel {
+    flex: 0 0 auto;
+    width: min(94vw, 44rem);
+    height: 100%;
+    padding-inline: var(--pad-x);
+    padding-block: clamp(2rem, 5vh, 4rem) clamp(3rem, 7vh, 5rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    border-left: 1px solid var(--line);
+  }
+
+  .panel:first-child { border-left: 0; }
+
+  .panel-hero { width: min(94vw, 41rem); }
+  .panel-evidence { width: min(96vw, 57rem); }
+  .panel-inside { width: min(96vw, 64rem); }
+  .panel-end { width: min(94vw, 36rem); }
+
+  /* ── Eyebrow: the metadata rail, turned on its side ───────────────── */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 1.7rem;
+    flex: none;
+  }
+
+  .eyebrow .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  /* ── Hero ─────────────────────────────────────────────────────────── */
+  .wordmark {
+    font-family: var(--serif);
+    font-size: clamp(3.4rem, 9vw, 6.4rem);
+    line-height: 0.88;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+    margin-bottom: 1.4rem;
+  }
+
+  .thesis {
+    font-family: var(--serif);
+    font-size: clamp(1.45rem, 3.4vw, 2.1rem);
+    line-height: 1.24;
+    letter-spacing: -0.015em;
+    max-width: 20ch;
+    margin-bottom: 1.3rem;
+  }
+
+  .thesis em { font-style: italic; color: var(--accent); }
+
+  .lede {
+    max-width: var(--measure);
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    margin-bottom: 2.1rem;
+  }
+
+  /* ── Download ─────────────────────────────────────────────────────── */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.45rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: 1px solid transparent;
+    box-shadow: var(--shadow);
+    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), filter 140ms ease;
+  }
+
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  .btn:active { transform: translateY(0); }
+  .btn svg { width: 1.05em; height: 1.05em; }
+
+  .btn-quiet {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line-strong);
+    box-shadow: none;
+  }
+
+  .btn-quiet:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+  .fineprint {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── The sideways-scroll affordance ───────────────────────────────── */
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 2.4rem;
+    font-family: var(--mono);
+    font-size: 0.67rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .hint svg { width: 1.5rem; height: 0.75rem; color: var(--accent); }
+  .hint .glide { animation: glide 2.4s cubic-bezier(0.45, 0, 0.35, 1) infinite; }
+
+  @keyframes glide {
+    0%, 100% { transform: translateX(0); opacity: 0.55; }
+    50% { transform: translateX(6px); opacity: 1; }
+  }
+
+  /* ── Section headings ─────────────────────────────────────────────── */
+  .section-title {
+    font-size: clamp(1.5rem, 3.1vw, 2rem);
+    line-height: 1.18;
+    max-width: 22ch;
+    margin-bottom: 0.9rem;
+  }
+
+  .section-body {
+    max-width: var(--measure);
+    color: var(--ink-muted);
+    font-size: 0.98rem;
+  }
+
+  /* ── Evidence cards ───────────────────────────────────────────────── */
+  .evidence {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 1rem;
+    margin-top: 1.9rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 0.63rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .card-claim {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  .arith {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    line-height: 1.75;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    border-top: 1px dashed var(--line-strong);
+    padding-top: 0.8rem;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+
+  .arith b { color: var(--ink); font-weight: 600; }
+
+  .card-note { font-size: 0.85rem; color: var(--ink-muted); margin: 0; }
+
+  .card-withheld { border-style: dashed; box-shadow: none; background: transparent; }
+  .card-withheld .card-label { color: var(--accent); }
+  .card-withheld .card-claim { color: var(--ink-muted); font-style: italic; }
+
+  /* ── Feature groups ───────────────────────────────────────────────── */
+  .groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 1.8rem 2.4rem;
+    margin-top: 2rem;
+  }
+
+  .group h3 {
+    font-size: 1.04rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .group li { font-size: 0.89rem; color: var(--ink-muted); line-height: 1.5; }
+  .group li b { color: var(--ink); font-weight: 600; display: block; }
+
+  .group code {
+    font-family: var(--mono);
+    font-size: 0.82em;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 0.12em 0.42em;
+    border-radius: 4px;
+  }
+
+  /* ── Principles ───────────────────────────────────────────────────── */
+  .principles {
+    list-style: none;
+    margin: 1.9rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: var(--measure);
+  }
+
+  .principles li {
+    display: grid;
+    grid-template-columns: 1.45rem minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+  }
+
+  .tick {
+    width: 1.45rem;
+    height: 1.45rem;
+    margin-top: 0.1rem;
+    color: var(--sage);
+    flex: none;
+  }
+
+  .tick circle { fill: var(--sage-soft); }
+
+  .tick path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+    transition: stroke-dashoffset 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* The tick draws itself once its row has finished fading up. */
+  .fade.is-in .tick path {
+    stroke-dashoffset: 0;
+    transition-delay: calc(var(--d, 0ms) + 380ms);
+  }
+
+  .principles b { font-weight: 600; font-size: 0.95rem; }
+  .principles span { color: var(--ink-muted); font-size: 0.9rem; display: block; }
+
+  /* ── Install steps ────────────────────────────────────────────────── */
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    margin: 1.9rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    max-width: var(--measure);
+  }
+
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 1.9rem minmax(0, 1fr);
+    gap: 0.95rem;
+  }
+
+  .steps li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    color: var(--accent);
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    width: 1.8rem;
+    height: 1.8rem;
+    display: grid;
+    place-items: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .steps b { display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.95rem; }
+  .steps p { color: var(--ink-muted); font-size: 0.89rem; }
+
+  .steps kbd {
+    font-family: var(--mono);
+    font-size: 0.82em;
+    border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.1em 0.4em;
+  }
+
+  .steps code { font-family: var(--mono); font-size: 0.85em; color: var(--ink); word-break: break-all; }
+
+  /* ── Closing panel ────────────────────────────────────────────────── */
+  .end-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.3rem;
+    margin-top: 2.2rem;
+    font-size: 0.86rem;
+    color: var(--ink-muted);
+  }
+
+  .end-links a { text-decoration: none; border-bottom: 1px solid var(--line-strong); padding-bottom: 1px; }
+  .end-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .colophon { margin-top: 1.6rem; font-size: 0.84rem; color: var(--ink-faint); }
+
+  /* ── Progress: how far along the deck you are ─────────────────────── */
+  .progress {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--line);
+    z-index: 10;
+  }
+
+  .progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 120ms linear;
+  }
+
+  /* ── Entrances ────────────────────────────────────────────────────
+     A plain fade, nothing else moving. Each panel's pieces carry their
+     own delay (assigned in script), so a panel resolves part by part —
+     label, then heading, then body, then whatever it holds.          */
+  .fade {
+    opacity: 0;
+    transition: opacity 900ms cubic-bezier(0.33, 0, 0.2, 1) var(--d, 0ms);
+  }
+
+  .fade.is-in { opacity: 1; }
+
+  /* ── Narrow or short screens fall back to an ordinary page ────────
+     Sideways scrolling is a desktop pleasure; on a phone it fights the
+     platform, and on a short window the panels would clip.            */
+  @media (max-width: 860px), (max-height: 560px) {
+    body { overflow: auto; }
+
+    .deck {
+      display: block;
+      height: auto;
+      overflow: visible;
+    }
+
+    .panel {
+      width: auto;
+      max-width: 42rem;
+      height: auto;
+      margin-inline: auto;
+      overflow: visible;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding-block: clamp(2.75rem, 9vw, 4.5rem);
+      justify-content: flex-start;
+    }
+
+    .panel:first-child { border-top: 0; }
+
+    .progress, .hint { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition-duration: 1ms !important; }
+    .fade { opacity: 1; }
+    .tick path { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+
+<body>
+
+<div class="deck" id="deck" tabindex="0" aria-label="Atlas — scroll sideways">
+
+  <!-- ── Hero ──────────────────────────────────────────────────────── -->
+  <section class="panel panel-hero">
+    <div>
+      <p class="eyebrow fade"><span class="n">v0.1.1</span> <span>Windows</span> <span>Local-first</span></p>
+
+      <h1 class="wordmark fade">Atlas</h1>
+
+      <p class="thesis fade">A second brain that <em>shows its work</em>.</p>
+
+      <p class="lede fade">
+        Habits, tasks, journal, notes and focus sessions, kept in one file on your own
+        machine. Atlas reads months of that history and tells you what it actually
+        supports — with the arithmetic printed underneath, so you can disagree with it.
+      </p>
+
+      <div class="actions fade">
+        <a class="btn" href="https://github.com/lemoniskartikeya/atlas/releases/latest" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M4 19h16" />
+          </svg>
+          Download for Windows
+        </a>
+
+        <a class="btn btn-quiet" href="https://github.com/lemoniskartikeya/atlas" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 1.5a10.5 10.5 0 0 0-3.32 20.47c.53.1.72-.23.72-.5v-1.8c-2.92.63-3.54-1.4-3.54-1.4-.48-1.23-1.17-1.56-1.17-1.56-.96-.65.07-.64.07-.64 1.06.08 1.62 1.09 1.62 1.09.94 1.61 2.47 1.15 3.07.88.1-.68.37-1.15.67-1.42-2.33-.26-4.78-1.17-4.78-5.19 0-1.15.41-2.08 1.09-2.82-.11-.27-.47-1.34.1-2.79 0 0 .89-.28 2.9 1.08a10 10 0 0 1 5.28 0c2.01-1.36 2.9-1.08 2.9-1.08.57 1.45.21 2.52.1 2.79.68.74 1.09 1.67 1.09 2.82 0 4.03-2.46 4.92-4.8 5.18.38.33.71.97.71 1.96v2.9c0 .28.19.61.73.5A10.5 10.5 0 0 0 12 1.5Z" />
+          </svg>
+          Read the source
+        </a>
+      </div>
+
+      <p class="fineprint fade">v0.1.1 &nbsp;·&nbsp; 80 MB &nbsp;·&nbsp; Windows 10/11, 64-bit &nbsp;·&nbsp; no account needed</p>
+
+      <p class="hint fade">
+        <svg class="glide" viewBox="0 0 32 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 8h26" />
+          <path d="m22 2 6 6-6 6" />
+        </svg>
+        Scroll to keep reading
+      </p>
+    </div>
+  </section>
+
+  <!-- ── The thesis, demonstrated ──────────────────────────────────── -->
+  <section class="panel panel-evidence">
+    <div>
+      <p class="eyebrow fade"><span class="n">01</span> <span>Evidence</span></p>
+
+      <h2 class="section-title fade">Every claim carries its receipt.</h2>
+
+      <p class="section-body fade">
+        Most trackers hand you a number and expect you to trust it. Atlas writes the
+        sentence and then prints the counts it came from, because an insight you can't
+        check is just a mood. When the history behind a claim is too thin, Atlas leaves
+        the claim out rather than softening it.
+      </p>
+
+      <div class="evidence">
+        <article class="card fade">
+          <p class="card-label">Insight</p>
+          <p class="card-claim">You finish Gym far more often on days you slept over seven hours.</p>
+          <p class="arith"><b>slept &gt; 7h</b>   17 of 21 days   81%
+<b>slept ≤ 7h</b>    9 of 27 days   33%
+<b>lift</b>         2.4×  ·  48 days observed</p>
+        </article>
+
+        <article class="card card-withheld fade">
+          <p class="card-label">Withheld</p>
+          <p class="card-claim">Not enough evidence yet.</p>
+          <p class="arith"><b>Reading</b>   4 days logged
+<b>needed</b>   14 days to compare against</p>
+          <p class="card-note">
+            You'll see this instead of a confident sentence built on four days. It's the
+            same rule everywhere: thin evidence is omitted, not dressed up.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── What's in it ──────────────────────────────────────────────── -->
+  <section class="panel panel-inside">
+    <div>
+      <p class="eyebrow fade"><span class="n">02</span> <span>Inside</span></p>
+
+      <h2 class="section-title fade">One app for the whole record.</h2>
+
+      <p class="section-body fade">
+        Atlas is a real desktop application — a tray icon, a global hotkey, native
+        notifications, and a single installer that carries everything it needs.
+      </p>
+
+      <div class="groups">
+        <div class="group fade">
+          <h3>Keep</h3>
+          <ul>
+            <li><b>Habits and streaks</b>Daily, weekly, monthly or custom schedules, with the streak maths shown.</li>
+            <li><b>Tasks and projects</b>A board that remembers what you finished, not just what's left.</li>
+            <li><b>Journal and notes</b>Plain Markdown, synced two ways with an Obsidian vault if you keep one.</li>
+            <li><b>Focus sessions</b>A deep-work timer that survives a throttled tab and logs distractions.</li>
+          </ul>
+        </div>
+
+        <div class="group fade">
+          <h3>Understand</h3>
+          <ul>
+            <li><b>Life Score and weekly review</b>A written recap of your week against the one before it.</li>
+            <li><b>Behaviour profile</b>When you actually work, which days hold, how long your runs last.</li>
+            <li><b>Predictions</b>Which streaks are about to break, and a burnout signal with its formula in the open.</li>
+            <li><b>What-if simulator</b>Move sleep, energy or timing and watch the forecast move with it.</li>
+          </ul>
+        </div>
+
+        <div class="group fade">
+          <h3>Do</h3>
+          <ul>
+            <li><b>Quick capture</b>Type <code>gym tomorrow 7am !high</code> and get a task. Offline, no parsing service.</li>
+            <li><b>Today's plan</b>Morning, afternoon and evening blocks, shakiest item first, each with its reason.</li>
+            <li><b>AI Coach</b>Grounded in your own numbers. Offline by default, or bring a key — or run it through Ollama so nothing leaves the machine.</li>
+            <li><b>Export</b>Encrypted backups, and seven CSV sheets you can open in a spreadsheet.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Principles ────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div>
+      <p class="eyebrow fade"><span class="n">03</span> <span>Terms</span></p>
+
+      <h2 class="section-title fade">Your data never leaves unless you carry it out.</h2>
+
+      <p class="section-body fade">
+        Atlas has no server to talk to. There is nothing to sign up for, nothing phoning
+        home, and no plan to sell you later.
+      </p>
+
+      <ul class="principles">
+        <li class="fade">
+          <svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="none" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>
+          <div><b>A SQLite file in your own AppData folder.</b>
+          <span>Back it up, copy it to another machine, or delete it. It's a file.</span></div>
+        </li>
+        <li class="fade">
+          <svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="none" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>
+          <div><b>No telemetry, no analytics, no accounts on anyone's server.</b>
+          <span>The optional sign-in is a lock on your own machine, not a service.</span></div>
+        </li>
+        <li class="fade">
+          <svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="none" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>
+          <div><b>History is kept, not quietly trimmed.</b>
+          <span>Habit logs, journal entries and past analytics stay until you remove them yourself.</span></div>
+        </li>
+        <li class="fade">
+          <svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="none" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>
+          <div><b>The AI Coach is off until you turn it on.</b>
+          <span>Offline it composes answers from your own numbers. Point it at Ollama and it stays that way.</span></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Install ───────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div>
+      <p class="eyebrow fade"><span class="n">04</span> <span>Install</span></p>
+
+      <h2 class="section-title fade">Three minutes, no terminal.</h2>
+
+      <ol class="steps">
+        <li class="fade">
+          <div><b>Download the installer.</b>
+          <p>The button opens the latest release on GitHub. Take
+          <code>atlas_setup.exe</code> — 80 MB, and it carries its own backend, so
+          there's no Python or Node to install.</p></div>
+        </li>
+        <li class="fade">
+          <div><b>Expect a SmartScreen warning.</b>
+          <p>The installer isn't code-signed yet, so Windows will caution you about an
+          unrecognised app. Choose <kbd>More info</kbd> then <kbd>Run anyway</kbd>. You can
+          verify the download against the SHA-256 digest on the release page.</p></div>
+        </li>
+        <li class="fade">
+          <div><b>Run it.</b>
+          <p>It installs for your user only, so there's no administrator prompt, and it
+          works offline. Launch from the desktop icon or press
+          <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> anywhere. Closing the window
+          parks Atlas in the tray; quit properly from the tray menu.</p></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── Close ─────────────────────────────────────────────────────── -->
+  <section class="panel panel-end">
+    <div>
+      <p class="eyebrow fade"><span class="n">05</span> <span>Get it</span></p>
+
+      <h2 class="section-title fade">Start keeping the record.</h2>
+
+      <p class="section-body fade">
+        Windows only for now. macOS and Linux builds aren't available yet — the app is
+        built with Tauri, so they're possible, just not packaged.
+      </p>
+
+      <div class="actions fade" style="margin-top:2rem">
+        <a class="btn" href="https://github.com/lemoniskartikeya/atlas/releases/latest" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M4 19h16" />
+          </svg>
+          Download for Windows
+        </a>
+      </div>
+
+      <p class="fineprint fade">v0.1.1 &nbsp;·&nbsp; 80 MB &nbsp;·&nbsp; Windows 10/11, 64-bit</p>
+
+      <nav class="end-links fade">
+        <a href="https://github.com/lemoniskartikeya/atlas" rel="noopener">Source</a>
+        <a href="https://github.com/lemoniskartikeya/atlas/releases" rel="noopener">Release notes</a>
+        <a href="https://github.com/lemoniskartikeya/atlas/issues" rel="noopener">Report a problem</a>
+      </nav>
+
+      <p class="colophon fade">Atlas — an independent project, built in the open.</p>
+    </div>
+  </section>
+</div>
+
+<div class="progress" aria-hidden="true"><span id="bar"></span></div>
+
+<script>
+  (function () {
+    var deck = document.getElementById("deck");
+    var bar = document.getElementById("bar");
+
+    // Sideways mode is the desktop layout only; below the breakpoint the CSS
+    // hands the page back to the document and none of this should engage.
+    var wide = window.matchMedia("(min-width: 861px) and (min-height: 561px)");
+    var calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    /* ── Eased horizontal scrolling ──────────────────────────────────
+       A notched mouse wheel delivers coarse jumps. Rather than applying
+       each one raw, keep a target and ease toward it every frame, so a
+       flick of the wheel reads as one continuous glide. Native input —
+       touch, drag, keyboard — writes scrollLeft directly and is picked
+       back up by the scroll listener below.                          */
+    var target = 0;
+    var running = false;
+
+    function limit() {
+      return deck.scrollWidth - deck.clientWidth;
+    }
+
+    function frame() {
+      var gap = target - deck.scrollLeft;
+
+      if (Math.abs(gap) < 0.5) {
+        deck.scrollLeft = target;
+        running = false;
+        return;
+      }
+
+      deck.scrollLeft += gap * 0.14;
+      requestAnimationFrame(frame);
+    }
+
+    function glideBy(amount) {
+      target = Math.max(0, Math.min(limit(), target + amount));
+
+      if (calm.matches) {
+        deck.scrollLeft = target;
+        return;
+      }
+
+      if (!running) {
+        running = true;
+        requestAnimationFrame(frame);
+      }
+    }
+
+    deck.addEventListener("wheel", function (e) {
+      if (!wide.matches) return;
+
+      // Trackpads that already swipe sideways are left alone.
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+      // A panel taller than the window keeps its own vertical scroll until
+      // it reaches an edge; only then does the wheel move the deck.
+      var panel = e.target.closest(".panel");
+
+      if (panel && panel.scrollHeight - panel.clientHeight > 1) {
+        var top = panel.scrollTop <= 0;
+        var bottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
+        if ((e.deltaY < 0 && !top) || (e.deltaY > 0 && !bottom)) return;
+      }
+
+      e.preventDefault();
+      glideBy(e.deltaY * 1.15);
+    }, { passive: false });
+
+    // Arrow keys, Page keys and Home/End move by panel-sized steps.
+    deck.addEventListener("keydown", function (e) {
+      if (!wide.matches) return;
+
+      var step = deck.clientWidth * 0.82;
+      var handled = true;
+
+      switch (e.key) {
+        case "ArrowRight": case "PageDown": glideBy(step); break;
+        case "ArrowLeft": case "PageUp": glideBy(-step); break;
+        case "Home": glideBy(-limit()); break;
+        case "End": glideBy(limit()); break;
+        default: handled = false;
+      }
+
+      if (handled) e.preventDefault();
+    });
+
+    // Keep the eased target honest whenever anything else does the scrolling,
+    // and drive the progress bar.
+    deck.addEventListener("scroll", function () {
+      if (!running) target = deck.scrollLeft;
+
+      var max = limit();
+      bar.style.transform = "scaleX(" + (max > 0 ? deck.scrollLeft / max : 0) + ")";
+    }, { passive: true });
+
+    window.addEventListener("resize", function () {
+      target = deck.scrollLeft;
+    });
+
+    /* ── Entrances ───────────────────────────────────────────────────
+       Stagger is per panel, so every panel opens the same way rather
+       than inheriting an ever-growing delay from the ones before it. */
+    document.querySelectorAll(".panel").forEach(function (panel) {
+      panel.querySelectorAll(".fade").forEach(function (el, i) {
+        el.style.setProperty("--d", Math.min(i, 7) * 90 + "ms");
+      });
+    });
+
+    var targets = document.querySelectorAll(".fade");
+
+    if (!("IntersectionObserver" in window)) {
+      targets.forEach(function (el) { el.classList.add("is-in"); });
+      return;
+    }
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-in");
+        io.unobserve(entry.target);
+      });
+    }, { threshold: 0.2 });
+
+    targets.forEach(function (el) { io.observe(el); });
+  })();
+</script>
+
+</body>
+</html>
